@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donation Management System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f9; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background: #0056b3; color: white; }
+        .form-group { margin-bottom: 15px; }
+        input, button { padding: 8px; width: 100%; box-sizing: border-box; }
+        button { background: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #218838; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Foodbank Inventory Management</h2>
+    
+    <div style="background: #e9ecef; padding: 15px; border-radius: 5px;">
+        <h3>Add New Item</h3>
+        <div class="form-group"><input type="number" id="itemId" placeholder="Item ID (e.g. 101)"></div>
+        <div class="form-group"><input type="text" id="itemName" placeholder="Item Name (e.g. Canned Beans)"></div>
+        <div class="form-group"><input type="text" id="itemType" placeholder="Type (e.g. Food)"></div>
+        <div class="form-group"><input type="number" id="itemStock" placeholder="Starting Quantity"></div>
+        <button onclick="addItem()">Add to Database</button>
+    </div>
+
+    <h3>Current Stock</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Quantity</th>
+            </tr>
+        </thead>
+        <tbody id="inventoryTable">
+            </tbody>
+    </table>
+</div>
+
+<script>
+    // Fetch and display items on load
+    async function loadItems() {
+        const response = await fetch('/api/items');
+        const items = await response.json();
+        const tbody = document.getElementById('inventoryTable');
+        tbody.innerHTML = '';
+        
+        items.forEach(item => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${item.ITEM_ID}</td>
+                    <td>${item.NAME}</td>
+                    <td>${item.TYPE}</td>
+                    <td><strong>${item.STOCK_QUANTITY}</strong></td>
+                </tr>
+            `;
+        });
+    }
+
+    // Add a new item
+    async function addItem() {
+        const payload = {
+            item_ID: document.getElementById('itemId').value,
+            name: document.getElementById('itemName').value,
+            type: document.getElementById('itemType').value,
+            stock_quantity: document.getElementById('itemStock').value
+        };
+
+        const response = await fetch('/api/items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            alert("Item added!");
+            loadItems(); // Refresh table
+        } else {
+            const err = await response.json();
+            alert("Error: " + err.error);
+        }
+    }
+
+    // Run on startup
+    loadItems();
+</script>
+
+</body>
+</html>
