@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Donation System</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .tabs { display: flex; margin-bottom: 20px; cursor: pointer; }
+        .tab { flex: 1; text-align: center; padding: 10px; background: #e9ecef; border-bottom: 2px solid transparent; }
+        .tab.active { background: white; border-bottom: 2px solid #0056b3; font-weight: bold; }
+        .form-group { margin-bottom: 15px; }
+        input, select, button { width: 100%; padding: 10px; box-sizing: border-box; margin-top: 5px; }
+        button { background: #0056b3; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        button:hover { background: #004494; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2 style="text-align: center; margin-top:0;">Donation System</h2>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('login')">Login</div>
+        <div class="tab" onclick="switchTab('register')">Register (Recipient)</div>
+    </div>
+
+    <div id="loginForm">
+        <div class="form-group">
+            <label>I am logging in as a:</label>
+            <select id="loginRole">
+                <option value="Staff">Staff Member</option>
+                <option value="Recipient">Recipient</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Enter your ID Number:</label>
+            <input type="number" id="loginId" placeholder="e.g., 1001" required>
+        </div>
+        <button onclick="login()">Login</button>
+    </div>
+
+    <div id="registerForm" class="hidden">
+        <div class="form-group">
+            <label>Organization / Individual Name:</label>
+            <input type="text" id="regName" placeholder="e.g., Hope Shelter">
+        </div>
+        <div class="form-group">
+            <label>Type:</label>
+            <select id="regType">
+                <option value="Orphanage">Orphanage</option>
+                <option value="Shelter">Shelter</option>
+                <option value="Individual">Individual</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Contact Info:</label>
+            <input type="text" id="regContact" placeholder="Email or Phone">
+        </div>
+        <button onclick="register()" style="background:#28a745;">Register</button>
+    </div>
+</div>
+
+<script>
+    function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('registerForm').classList.add('hidden');
+        
+        if(tab === 'login') {
+            document.querySelectorAll('.tab')[0].classList.add('active');
+            document.getElementById('loginForm').classList.remove('hidden');
+        } else {
+            document.querySelectorAll('.tab')[1].classList.add('active');
+            document.getElementById('registerForm').classList.remove('hidden');
+        }
+    }
+
+    async function login() {
+        const payload = {
+            role: document.getElementById('loginRole').value,
+            login_ID: document.getElementById('loginId').value
+        };
+
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            // Save user session in the browser
+            localStorage.setItem('session', JSON.stringify(data));
+            window.location.href = '/'; // Redirect to index
+        } else {
+            alert(data.error);
+        }
+    }
+
+    async function register() {
+        const payload = {
+            name: document.getElementById('regName').value,
+            type: document.getElementById('regType').value,
+            contact: document.getElementById('regContact').value
+        };
+
+        const res = await fetch('/api/register/recipient', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            alert(`Success! Please write down your new Recipient ID: ${data.assigned_ID}`);
+            switchTab('login');
+            document.getElementById('loginId').value = data.assigned_ID;
+            document.getElementById('loginRole').value = 'Recipient';
+        } else {
+            alert("Error: " + data.error);
+        }
+    }
+</script>
+
+</body>
+</html>

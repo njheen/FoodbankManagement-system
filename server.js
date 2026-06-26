@@ -97,3 +97,93 @@ app.post('/api/donations', async (req, res) => {
         if (connection) await connection.close();
     }
 });
+
+// ==========================================
+// NEW API ROUTES (CRUD & AUTH)
+// ==========================================
+
+// --- INVENTORY CRUD EXTRAS ---
+
+// UPDATE AN ITEM (PUT)
+app.put('/api/items/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, type, stock_quantity } = req.body;
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        await connection.execute(
+            `UPDATE Item SET name = :1, type = :2, stock_quantity = :3 WHERE item_ID = :4`,
+            [name, type, stock_quantity, id]
+        );
+        res.json({ message: "Item updated successfully!" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    } finally {
+        if (connection) await connection.close();
+    }
+});
+
+// DELETE AN ITEM (DELETE)
+app.delete('/api/items/:id', async (req, res) => {
+    const { id } = req.params;
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        await connection.execute(`DELETE FROM Item WHERE item_ID = :1`, [id]);
+        res.json({ message: "Item deleted successfully!" });
+    } catch (err) {
+        // Will throw an error if the item is linked to a Donation (Foreign Key constraint)
+        res.status(500).json({ error: "Cannot delete item. It may be linked to an existing donation." });
+    } finally {
+        if (connection) await connection.close();
+    }
+});
+
+
+// --- AUTHENTICATION & REGISTRATION ---
+
+// UNIFIED LOGIN (Staff & Recipient)
+app.post('/api/login', async (req, res) => {
+    const { login_ID, role } = req.body;
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        let result;
+        
+        if (role === 'Staff') {
+            result = await connection.execute(`SELECT * FROM Staff WHERE staff_ID = :1`, [login_ID]);
+        } else if (role === 'Recipient') {
+            result = await connection.execute(`SELECT * FROM Recipient WHERE recipient_ID = :1`, [login_ID]);
+        }
+
+        if (result.rows.length > 0) {
+            res.json({ success: true, user: result.rows[0], role: role });
+        } else {
+            res.status(401).json({ success: false, error: "Invalid ID or Role not found." });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    } finally {
+        if (connection) await connection.close();
+    }
+});
+
+// REGISTER A NEW RECIPIENT
+app.post('/api/register/recipient', async (req, res) => {
+    const { name, type, contact } = req.body;
+    const recipient_ID = Math.floor(Math.random() * 90000) + 10000; // Generate a random 5-digit ID
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        await connection.execute(
+            `INSERT INTO Recipient (recipient_ID, name_recipient, type, contact_recipient) VALUES (:1, :2, :3, :4)`,
+            [recipient_ID, name, type, contact]
+        );
+        res.status(201).json({ message: "Registration successful!", assigned_ID: recipient_ID });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    } finally {
+        if (connection) await connection.close();
+    }
+});
+
