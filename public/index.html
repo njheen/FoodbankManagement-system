@@ -40,7 +40,7 @@
         </div>
     </div>
 
-    <h3>Available Inventory</h3>
+    <h3>Available Food Inventory</h3>
     <table>
         <thead>
             <tr>
@@ -57,25 +57,23 @@
 </div>
 
 <script>
-    let currentUser = null;
+let currentUser = null;
+    let currentInventory = []; // NEW: We will store the data here so strings don't break our HTML!
 
     // 1. CHECK AUTHENTICATION ON LOAD
     function checkAuth() {
         const sessionData = localStorage.getItem('session');
         if (!sessionData) {
-            window.location.href = '/login.html'; // Kick them out if not logged in
+            window.location.href = '/login.html'; 
             return;
         }
         
         currentUser = JSON.parse(sessionData);
-        
-        // Update Welcome Message
         const name = currentUser.role === 'Staff' ? currentUser.user.NAME_STAFF : currentUser.user.NAME_RECIPIENT;
         document.getElementById('welcomeMessage').innerText = `Welcome, ${name} (${currentUser.role})`;
 
-        // Unlock Admin UI if Staff
         if (currentUser.role === 'Staff') {
-            document.querySelectorAll('.staff-only').forEach(el => el.style.display = 'table-cell'); // Adjust for table
+            document.querySelectorAll('.staff-only').forEach(el => el.style.display = 'table-cell'); 
             document.getElementById('adminPanel').style.display = 'block';
         }
         
@@ -91,21 +89,22 @@
     // 3. READ (Fetch Inventory)
     async function loadItems() {
         const response = await fetch('/api/items');
-        const items = await response.json();
+        currentInventory = await response.json(); // Save the data to our new global array
+        
         const tbody = document.getElementById('inventoryTable');
         tbody.innerHTML = '';
         
-        items.forEach(item => {
+        currentInventory.forEach(item => {
             let row = `<tr>
                 <td>${item.ITEM_ID}</td>
                 <td>${item.NAME}</td>
                 <td>${item.TYPE}</td>
                 <td><strong>${item.STOCK_QUANTITY}</strong></td>`;
             
-            // Render Edit/Delete buttons ONLY if Staff
             if (currentUser && currentUser.role === 'Staff') {
+                // FIXED: We now ONLY pass the numerical ITEM_ID. No more string breaking!
                 row += `<td class="staff-only" style="display:table-cell;">
-                            <button class="btn btn-blue" onclick="editItem(${item.ITEM_ID}, '${item.NAME}', '${item.TYPE}', ${item.STOCK_QUANTITY})">Edit</button>
+                            <button class="btn btn-blue" onclick="editItem(${item.ITEM_ID})">Edit</button>
                             <button class="btn btn-red" onclick="deleteItem(${item.ITEM_ID})">Delete</button>
                         </td>`;
             }
@@ -141,11 +140,20 @@
     }
 
     // 5. UPDATE (Edit Item via Prompts)
-    async function editItem(id, currentName, currentType, currentQty) {
-        const newName = prompt("Edit Name:", currentName);
-        const newType = prompt("Edit Type:", currentType);
-        const newQty = prompt("Edit Quantity:", currentQty);
+    async function editItem(id) {
+        // Retrieve the safe strings directly from our saved array using the ID
+        const itemToEdit = currentInventory.find(item => item.ITEM_ID === id);
+        
+        if (!itemToEdit) {
+            alert("Could not find item data.");
+            return;
+        }
 
+        const newName = prompt("Edit Name:", itemToEdit.NAME);
+        const newType = prompt("Edit Type:", itemToEdit.TYPE);
+        const newQty = prompt("Edit Quantity:", itemToEdit.STOCK_QUANTITY);
+
+        // Ensure the user didn't hit "Cancel" on the prompt
         if (newName !== null && newType !== null && newQty !== null) {
             const res = await fetch(`/api/items/${id}`, {
                 method: 'PUT',
