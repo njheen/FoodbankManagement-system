@@ -1,3 +1,11 @@
+-- this is the database script for the Donation Management System
+-- copy these into the dbms, oracle sql developer 26 ai free idk
+-- database name: ProjectDB
+-- username: project
+-- password: project123
+-- port: 1521
+-- service name: FREEPDB1
+
 -- =======================================================
 -- 1. CLEANUP (Drop tables & sequences to prevent ORA-00955)
 -- =======================================================
