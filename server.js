@@ -104,16 +104,41 @@ app.post('/api/donations', async (req, res) => {
 
 // --- INVENTORY CRUD EXTRAS ---
 
-// UPDATE AN ITEM (PUT)
-app.put('/api/items/:id', async (req, res) => {
+
+// GET A SINGLE ITEM (For pre-filling the edit page)
+app.get('/api/items/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, type, stock_quantity } = req.body;
     let connection;
     try {
         connection = await db.getPool().getConnection();
+        const result = await connection.execute(`SELECT * FROM Item WHERE item_ID = :1`, [id]);
+        
+        if (result.rows.length > 0) {
+            res.json(result.rows[0]);
+        } else {
+            res.status(404).json({ error: "Item not found" });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    } finally {
+        if (connection) await connection.close();
+    }
+});
+
+
+// UPDATE AN ITEM (PUT)
+app.put('/api/items/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, type, stock_quantity, expiry_date } = req.body;
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        // Convert string to Date object for Oracle, or set to null if blank
+        const expDate = expiry_date ? new Date(expiry_date) : null; 
+        
         await connection.execute(
-            `UPDATE Item SET name = :1, type = :2, stock_quantity = :3 WHERE item_ID = :4`,
-            [name, type, stock_quantity, id]
+            `UPDATE Item SET name = :1, type = :2, stock_quantity = :3, expiry_date = :4 WHERE item_ID = :5`,
+            [name, type, stock_quantity, expDate, id]
         );
         res.json({ message: "Item updated successfully!" });
     } catch (err) {
@@ -186,4 +211,35 @@ app.post('/api/register/recipient', async (req, res) => {
         if (connection) await connection.close();
     }
 });
+
+
+// ADD MULTIPLE ITEMS AT ONCE (Batch Insert)
+app.post('/api/items/batch', async (req, res) => {
+    const { items } = req.body; // Expects an array of items from the frontend
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        
+        // Loop through the array and insert each item
+        for (let item of items) {
+            // Generate a random 5-digit item_ID (similar to how Recipient IDs are handled)
+            const item_ID = Math.floor(Math.random() * 90000) + 10000;
+            const expDate = item.expiry_date ? new Date(item.expiry_date) : null; 
+            
+            await connection.execute(
+                `INSERT INTO Item (item_ID, name, type, stock_quantity, expiry_date) VALUES (:1, :2, :3, :4, :5)`,
+                [item_ID, item.name, item.type, item.stock_quantity, expDate]
+            );
+        }
+        
+        res.json({ success: true, message: "All items added successfully!" });
+    } catch (err) {
+        console.error("Batch Insert Error:", err.message);
+        res.status(500).json({ error: err.message });
+    } finally {
+        if (connection) await connection.close();
+    }
+});
+
+
 

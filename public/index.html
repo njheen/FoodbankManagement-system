@@ -31,13 +31,7 @@
     
     <div id="adminPanel" class="staff-only" style="background: #e9ecef; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
         <h3>Add New Inventory Item</h3>
-        <div style="display: flex; gap: 10px;">
-            <input type="number" id="itemId" placeholder="Item ID" style="width: 15%;">
-            <input type="text" id="itemName" placeholder="Item Name" style="width: 35%;">
-            <input type="text" id="itemType" placeholder="Type" style="width: 25%;">
-            <input type="number" id="itemStock" placeholder="Qty" style="width: 15%;">
-            <button class="btn btn-green" onclick="addItem()" style="width: 10%;">Add</button>
-        </div>
+        <button class="btn btn-green" onclick="window.location.href='/add-items.html'">+ Add New Items</button>
     </div>
 
     <h3>Available Food Inventory</h3>
@@ -48,6 +42,7 @@
                 <th>Name</th>
                 <th>Type</th>
                 <th>Quantity</th>
+                <th>Expiry Date</th>
                 <th class="staff-only">Actions</th>
             </tr>
         </thead>
@@ -95,14 +90,17 @@ let currentUser = null;
         tbody.innerHTML = '';
         
         currentInventory.forEach(item => {
+            // Format the date nicely (e.g., MM/DD/YYYY) or display 'N/A' if null
+            const expDate = item.EXPIRY_DATE ? new Date(item.EXPIRY_DATE).toLocaleDateString() : 'N/A';
+
             let row = `<tr>
                 <td>${item.ITEM_ID}</td>
                 <td>${item.NAME}</td>
                 <td>${item.TYPE}</td>
-                <td><strong>${item.STOCK_QUANTITY}</strong></td>`;
+                <td><strong>${item.STOCK_QUANTITY}</strong></td>
+                <td>${expDate}</td>`;
             
             if (currentUser && currentUser.role === 'Staff') {
-                // FIXED: We now ONLY pass the numerical ITEM_ID. No more string breaking!
                 row += `<td class="staff-only" style="display:table-cell;">
                             <button class="btn btn-blue" onclick="editItem(${item.ITEM_ID})">Edit</button>
                             <button class="btn btn-red" onclick="deleteItem(${item.ITEM_ID})">Delete</button>
@@ -139,31 +137,10 @@ let currentUser = null;
         }
     }
 
-    // 5. UPDATE (Edit Item via Prompts)
-    async function editItem(id) {
-        // Retrieve the safe strings directly from our saved array using the ID
-        const itemToEdit = currentInventory.find(item => item.ITEM_ID === id);
-        
-        if (!itemToEdit) {
-            alert("Could not find item data.");
-            return;
-        }
-
-        const newName = prompt("Edit Name:", itemToEdit.NAME);
-        const newType = prompt("Edit Type:", itemToEdit.TYPE);
-        const newQty = prompt("Edit Quantity:", itemToEdit.STOCK_QUANTITY);
-
-        // Ensure the user didn't hit "Cancel" on the prompt
-        if (newName !== null && newType !== null && newQty !== null) {
-            const res = await fetch(`/api/items/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newName, type: newType, stock_quantity: newQty })
-            });
-            
-            if (res.ok) loadItems();
-            else alert("Error updating item.");
-        }
+ // 5. UPDATE (Redirect to edit page)
+    function editItem(id) {
+        // Redirect to the new edit page, passing the ID in the URL
+        window.location.href = `/edit.html?id=${id}`;
     }
 
     // 6. DELETE

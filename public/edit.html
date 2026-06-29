@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Item - Donation System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f9; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #333; }
+        input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; }
+        .btn { border: none; cursor: pointer; font-weight: bold; border-radius: 4px; padding: 10px 15px; margin-top: 10px; }
+        .btn-green { background: #28a745; color: white; }
+        .btn-gray { background: #6c757d; color: white; text-decoration: none; display: inline-block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Edit Inventory Item</h2>
+    <div id="editForm">
+        <div class="form-group">
+            <label>Item Name</label>
+            <input type="text" id="editName" placeholder="Loading...">
+        </div>
+        <div class="form-group">
+            <label>Item Type</label>
+            <input type="text" id="editType" placeholder="Loading...">
+        </div>
+        <div class="form-group">
+        <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" id="editQty" placeholder="Loading...">
+        </div>
+
+        <div class="form-group">
+            <label>Expiry Date (Optional)</label>
+            <input type="date" id="editExpiry" placeholder="Loading...">
+        </div>
+
+        <button class="btn btn-green" onclick="saveItem()">Save Changes</button>
+        <a href="/index.html" class="btn btn-gray">Cancel</a>
+    </div>
+</div>
+
+<script>
+    // 1. Get the item ID from the URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const itemId = urlParams.get('id');
+
+    // 2. Security Check: Ensure only logged-in Staff can view this page
+    function checkAuth() {
+        const sessionData = localStorage.getItem('session');
+        if (!sessionData) {
+            window.location.href = '/login.html';
+            return false;
+        }
+        const currentUser = JSON.parse(sessionData);
+        if (currentUser.role !== 'Staff') {
+            alert("Unauthorized access.");
+            window.location.href = '/index.html';
+            return false;
+        }
+        return true;
+    }
+
+    // 3. Fetch the item's current data and pre-fill the text boxes
+    async function loadItemData() {
+        if (!itemId) {
+            alert("No item ID provided.");
+            window.location.href = '/index.html';
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/items/${itemId}`);
+            if (response.ok) {
+                const item = await response.json();
+                // Oracle keys are typically uppercase
+                document.getElementById('editName').value = item.NAME;
+                document.getElementById('editType').value = item.TYPE;
+                document.getElementById('editQty').value = item.STOCK_QUANTITY;
+                
+                // Pre-fill the expiry date if it exists
+                if (item.EXPIRY_DATE) {
+                    const d = new Date(item.EXPIRY_DATE);
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    document.getElementById('editExpiry').value = `${year}-${month}-${day}`;
+                }
+
+            } else {
+                alert("Failed to load item data.");
+                window.location.href = '/index.html';
+            }
+        } catch (error) {
+            console.error("Error fetching item:", error);
+        }
+    }
+
+    // 4. Save the edited changes
+    async function saveItem() {
+        const newName = document.getElementById('editName').value;
+        const newType = document.getElementById('editType').value;
+        const newQty = document.getElementById('editQty').value;
+        const newExpiry = document.getElementById('editExpiry').value; // Get the date
+
+        // Basic validation
+        if (!newName || !newType || !newQty) {
+            alert("Please fill out all fields.");
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/items/${itemId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                     name: newName,
+                     type: newType, 
+                     stock_quantity: newQty,
+                     expiry_date: newExpiry })
+            });
+
+            if (res.ok) {
+                // Redirect back to dashboard on success
+                window.location.href = '/index.html';
+            } else {
+                alert("Error updating item.");
+            }
+        } catch (error) {
+            console.error("Error saving item:", error);
+        }
+    }
+
+    // Initialize Page
+    if (checkAuth()) {
+        loadItemData();
+    }
+</script>
+
+</body>
+</html>

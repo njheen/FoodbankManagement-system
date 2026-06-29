@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Items - Donation System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f9; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .item-row { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #ddd;}
+        .item-row input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .btn { border: none; cursor: pointer; font-weight: bold; border-radius: 4px; padding: 10px 15px; }
+        .btn-green { background: #28a745; color: white; }
+        .btn-blue { background: #0056b3; color: white; margin-bottom: 20px;}
+        .btn-red { background: #dc3545; color: white; padding: 10px; font-weight: bold;}
+        .btn-gray { background: #6c757d; color: white; text-decoration: none; display: inline-block; }
+        .actions { margin-top: 20px; display: flex; gap: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Add New Inventory Items</h2>
+    <p>Fill out the item details below. You can add multiple items at once.</p>
+    
+    <button class="btn btn-blue" onclick="addRow()">+ Add Another Row</button>
+
+    <div id="itemsContainer">
+        </div>
+
+    <div class="actions">
+        <button class="btn btn-green" onclick="saveItems()">Save All Items</button>
+        <a href="/index.html" class="btn btn-gray">Cancel</a>
+    </div>
+</div>
+
+<script>
+    // 1. Security Check (Only Staff should add items)
+    function checkAuth() {
+        const sessionData = localStorage.getItem('session');
+        if (!sessionData) {
+            window.location.href = '/login.html';
+            return false;
+        }
+        const currentUser = JSON.parse(sessionData);
+        if (currentUser.role !== 'Staff') {
+            alert("Unauthorized access.");
+            window.location.href = '/index.html';
+            return false;
+        }
+        return true;
+    }
+
+    // 2. Function to add a new input row to the screen
+    function addRow() {
+        const container = document.getElementById('itemsContainer');
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+            <input type="text" placeholder="Item Name" class="itemName">
+            <input type="text" placeholder="Item Type" class="itemType">
+            <input type="number" placeholder="Quantity" class="itemQty" min="1">
+            <input type="date" class="itemExpiry" title="Expiry Date (Optional)">
+            <button class="btn btn-red" onclick="this.parentElement.remove()" title="Remove this row">X</button>
+        `;
+        container.appendChild(row);
+    }
+
+    // 3. Collect all data and send to the server
+    async function saveItems() {
+        const rows = document.querySelectorAll('.item-row');
+        const itemsToSave = [];
+        
+        // Loop through all HTML rows and extract the text
+        for (let row of rows) {
+            const name = row.querySelector('.itemName').value.trim();
+            const type = row.querySelector('.itemType').value.trim();
+            const qty = row.querySelector('.itemQty').value;
+            const expiry = row.querySelector('.itemExpiry').value; // Get the date
+            
+            if (name !== "" && type !== "" && qty !== "") {
+                // Pass expiry_date to the backend
+                itemsToSave.push({ name: name, type: type, stock_quantity: qty, expiry_date: expiry });
+            }
+        }
+
+        // Validation
+        if (itemsToSave.length === 0) {
+            alert("Please fill out at least one complete row before saving.");
+            return;
+        }
+
+        // Send array to our new batch route
+        try {
+            const res = await fetch('/api/items/batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: itemsToSave })
+            });
+
+            if (res.ok) {
+                alert("All items added successfully!");
+                window.location.href = '/index.html'; // Go back to dashboard
+            } else {
+                const data = await res.json();
+                alert("Database Error: " + (data.error || "Failed to add items"));
+            }
+        } catch (error) {
+            console.error("Error saving items:", error);
+            alert("A network error occurred.");
+        }
+    }
+
+    // Run this when the page loads
+    if (checkAuth()) {
+        addRow(); // Automatically create the very first empty row for the user
+    }
+</script>
+
+</body>
+</html>

@@ -128,3 +128,22 @@ BEGIN
     WHERE item_ID = :NEW.item_ID;
 END;
 /
+
+
+-- dummy data for testing purposes
+
+-- Insert dummy data into Staff table
+INSERT INTO Staff (staff_ID, name_staff, role, contact_staff) 
+VALUES (101, 'Najihen', 'Admin', 'alice.smith@example.com');
+
+INSERT INTO Staff (staff_ID, name_staff, role, contact_staff) 
+VALUES (102, 'Akif', 'Coordinator', '555-0123');
+
+INSERT INTO Staff (staff_ID, name_staff, role, contact_staff) 
+VALUES (103, 'Harith', 'Volunteer', 'charlie.b@example.com');
+
+INSERT INTO Staff (staff_ID, name_staff, role, contact_staff) 
+VALUES (104, 'Hilmi', 'Manager', '555-0199');
+
+-- Commit the transaction to save changes
+COMMIT;
