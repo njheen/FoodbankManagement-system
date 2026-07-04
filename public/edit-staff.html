@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Staff</title>
+    <style> /* Use same basic style as edit.html */
+        body { font-family: Arial; margin: 40px; background: #f4f4f9; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        input, select, button { width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box; }
+        button { background: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        .cancel { background: #6c757d; text-align: center; display: block; text-decoration: none; color: white; padding: 10px; border-radius: 4px;}
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Edit Staff Profile</h2>
+    <label>Name</label> <input type="text" id="editName">
+    <label>Role</label> 
+    <select id="editRole">
+        <option value="Staff">Staff</option>
+        <option value="Volunteer">Volunteer</option>
+        <option value="Coordinator">Coordinator</option>
+        <option value="Manager">Manager</option>
+        <option value="Admin">Admin</option>
+    </select>
+    <label>Contact</label> <input type="text" id="editContact">
+    <button onclick="saveStaff()">Save Changes</button>
+    <a href="/manage-users.html" class="cancel">Cancel</a>
+</div>
+<script>
+    const id = new URLSearchParams(window.location.search).get('id');
+    
+    async function loadData() {
+        const res = await fetch(`/api/admin/staff/${id}`);
+        const data = await res.json();
+        document.getElementById('editName').value = data.NAME_STAFF;
+        document.getElementById('editRole').value = data.ROLE;
+        document.getElementById('editContact').value = data.CONTACT_STAFF;
+    }
+
+    async function saveStaff() {
+        const payload = {
+            name: document.getElementById('editName').value,
+            role: document.getElementById('editRole').value,
+            contact: document.getElementById('editContact').value
+        };
+        const res = await fetch(`/api/admin/staff/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) window.location.href = '/manage-users.html';
+        else alert("Update failed.");
+    }
+    loadData();
+</script>
+</body>
+</html>

@@ -32,6 +32,12 @@
     <div id="adminPanel" class="staff-only" style="background: #e9ecef; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
         <h3>Add New Inventory Item</h3>
         <button class="btn btn-green" onclick="window.location.href='/add-items.html'">+ Add New Items</button>
+
+        <h3>Manage Staff</h3>
+        <button id="adminBtn" class="btn btn-green" style="display: none; background-color: #17a2b8;" onclick="window.location.href='/register-staff.html'">+ Register Staff</button>
+
+        <h3>Manage Users</h3>
+        <button id="manageUsersBtn" class="btn btn-blue" style="display: none;" onclick="window.location.href='/manage-users.html'">⚙️ Manage Users</button>
     </div>
 
         <!-- code for displaying search and filter options -->
@@ -81,6 +87,18 @@ let currentUser = null;
             window.location.href = '/login.html'; 
             return;
         }
+
+           // Check session and apply Admin-specific UI changes
+        const sessionStr = localStorage.getItem('session');
+        if (sessionStr) {
+            const userSession = JSON.parse(sessionStr);
+        
+        // userSession.role just says "Staff". We need the specific DB role:
+        if (userSession.user && userSession.user.ROLE === 'Admin') {
+            document.getElementById('adminBtn').style.display = 'inline-block';
+            document.getElementById('manageUsersBtn').style.display = 'inline-block'; // Show new button
+        }
+    }
         
         currentUser = JSON.parse(sessionData);
         const name = currentUser.role === 'Staff' ? currentUser.user.NAME_STAFF : currentUser.user.NAME_RECIPIENT;

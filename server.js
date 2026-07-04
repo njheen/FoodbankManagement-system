@@ -193,6 +193,123 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+
+
+
+// ==========================================
+// ADMIN: USER MANAGEMENT ROUTES (CRUD)
+// ==========================================
+
+// 1. GET ALL STAFF
+app.get('/api/admin/staff', async (req, res) => {
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        const result = await connection.execute(`SELECT * FROM Staff ORDER BY staff_ID ASC`);
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// 2. GET ALL RECIPIENTS
+app.get('/api/admin/recipients', async (req, res) => {
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        const result = await connection.execute(`SELECT * FROM Recipient ORDER BY recipient_ID ASC`);
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// 3. GET SINGLE STAFF (For Prefill)
+app.get('/api/admin/staff/:id', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        const result = await connection.execute(`SELECT * FROM Staff WHERE staff_ID = :1`, [id]);
+        if (result.rows.length > 0) res.json(result.rows[0]);
+        else res.status(404).json({ error: "Staff not found" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// 4. GET SINGLE RECIPIENT (For Prefill)
+app.get('/api/admin/recipients/:id', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        const result = await connection.execute(`SELECT * FROM Recipient WHERE recipient_ID = :1`, [id]);
+        if (result.rows.length > 0) res.json(result.rows[0]);
+        else res.status(404).json({ error: "Recipient not found" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// 5. UPDATE STAFF
+app.put('/api/admin/staff/:id', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const { name, role, contact } = req.body;
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        await connection.execute(
+            `UPDATE Staff SET name_staff = :1, role = :2, contact_staff = :3 WHERE staff_ID = :4`,
+            [name, role, contact, id]
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// 6. UPDATE RECIPIENT
+app.put('/api/admin/recipients/:id', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const { name, type, contact } = req.body;
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        await connection.execute(
+            `UPDATE Recipient SET name_recipient = :1, type = :2, contact_recipient = :3 WHERE recipient_ID = :4`,
+            [name, type, contact, id]
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// 7. DELETE STAFF
+app.delete('/api/admin/staff/:id', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        await connection.execute(`DELETE FROM Staff WHERE staff_ID = :1`, [id]);
+        res.json({ success: true });
+    } catch (err) { 
+        res.status(500).json({ error: "Cannot delete staff. They may be linked to a donation." }); 
+    }
+    finally { if (connection) await connection.close(); }
+});
+
+// 8. DELETE RECIPIENT
+app.delete('/api/admin/recipients/:id', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        await connection.execute(`DELETE FROM Recipient WHERE recipient_ID = :1`, [id]);
+        res.json({ success: true });
+    } catch (err) { 
+        res.status(500).json({ error: "Cannot delete recipient. They may be linked to a record." }); 
+    }
+    finally { if (connection) await connection.close(); }
+});
+
+
+
 // REGISTER A NEW RECIPIENT
 app.post('/api/register/recipient', async (req, res) => {
     const { name, type, contact } = req.body;
@@ -206,6 +323,36 @@ app.post('/api/register/recipient', async (req, res) => {
         );
         res.status(201).json({ message: "Registration successful!", assigned_ID: recipient_ID });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    } finally {
+        if (connection) await connection.close();
+    }
+});
+
+
+// REGISTER A NEW STAFF (ADMIN ONLY)
+app.post('/api/register/staff', async (req, res) => {
+    const { name, role, contact } = req.body;
+    
+    // Generate a random 5-digit staff_ID
+    const staff_ID = Math.floor(Math.random() * 90000) + 10000; 
+    
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        
+        await connection.execute(
+            `INSERT INTO Staff (staff_ID, name_staff, role, contact_staff) VALUES (:1, :2, :3, :4)`,
+            [staff_ID, name, role, contact]
+        );
+        
+        res.json({ 
+            success: true, 
+            assigned_ID: staff_ID, 
+            message: "Staff registered successfully!" 
+        });
+    } catch (err) {
+        console.error("Staff Registration Error:", err.message);
         res.status(500).json({ error: err.message });
     } finally {
         if (connection) await connection.close();

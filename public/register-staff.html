@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Staff - Donation System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f9; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h2 { color: #0056b3; margin-top: 0; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #333; }
+        input, select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .btn { border: none; cursor: pointer; font-weight: bold; border-radius: 4px; padding: 10px 15px; width: 100%; font-size: 16px; margin-bottom: 10px;}
+        .btn-green { background: #28a745; color: white; }
+        .btn-gray { background: #6c757d; color: white; text-decoration: none; display: block; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Register New Staff</h2>
+    <p style="color: #666; margin-bottom: 25px;">Only Administrators can add new personnel to the system.</p>
+    
+    <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="staffName" placeholder="e.g., Jane Doe">
+    </div>
+
+    <div class="form-group">
+        <label>System Role</label>
+        <select id="staffRole">
+            <option value="Staff">Staff</option>
+            <option value="Volunteer">Volunteer</option>
+            <option value="Coordinator">Coordinator</option>
+            <option value="Manager">Manager</option>
+            <option value="Admin">Admin</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Contact Information (Email or Phone)</label>
+        <input type="text" id="staffContact" placeholder="e.g., jane@example.com">
+    </div>
+
+    <button class="btn btn-green" onclick="registerStaff()">Register Personnel</button>
+    <a href="/index.html" class="btn btn-gray">Back to Dashboard</a>
+</div>
+
+<script>
+    // 1. Strict Security Check: Ensure only logged-in ADMINS can view this page
+    // 1. Strict Security Check: Ensure only logged-in ADMINS can view this page
+    function checkAdminAuth() {
+        const sessionData = localStorage.getItem('session');
+        if (!sessionData) {
+            window.location.href = '/login.html';
+            return false;
+        }
+        
+        const currentUser = JSON.parse(sessionData);
+        
+        // CORRECTED: We must check user.ROLE from the database, not just the login tab role
+        if (!currentUser.user || currentUser.user.ROLE !== 'Admin') {
+            alert("Security Alert: Only Administrators can access this page.");
+            window.location.href = '/index.html';
+            return false;
+        }
+        return true;
+    }
+
+    // 2. Submit data to the server
+    async function registerStaff() {
+        const name = document.getElementById('staffName').value.trim();
+        const role = document.getElementById('staffRole').value;
+        const contact = document.getElementById('staffContact').value.trim();
+
+        if (!name || !contact) {
+            alert("Please fill out all fields.");
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/register/staff', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, role, contact })
+            });
+
+            const data = await res.json();
+            
+            if (res.ok) {
+                // Show the newly generated Staff ID so the admin can give it to the new employee
+                alert(`Success! The new staff member has been registered.\n\nIMPORTANT: Their Login ID is [ ${data.assigned_ID} ]`);
+                window.location.href = '/index.html'; 
+            } else {
+                alert("Database Error: " + (data.error || "Failed to register staff."));
+            }
+        } catch (error) {
+            console.error("Registration error:", error);
+            alert("A network error occurred.");
+        }
+    }
+
+    // Run Auth check immediately upon loading
+    checkAdminAuth();
+</script>
+
+</body>
+</html>
