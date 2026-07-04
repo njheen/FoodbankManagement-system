@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Donors - Donation System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f9; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); margin-bottom: 20px;}
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; align-items: flex-end;}
+        .form-row div { flex: 1; }
+        input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px;}
+        label { font-weight: bold; font-size: 13px; color: #555; display: block; margin-bottom: 5px;}
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background: #28a745; color: white; }
+        .btn { border: none; cursor: pointer; font-weight: bold; border-radius: 4px; padding: 10px 15px; }
+        .btn-green { background: #28a745; color: white; }
+        .btn-blue { background: #007bff; color: white; padding: 6px 12px;}
+        .btn-red { background: #dc3545; color: white; padding: 6px 12px;}
+        .btn-gray { background: #6c757d; color: white; text-decoration: none; display: inline-block; padding: 10px 15px;}
+    </style>
+</head>
+<body>
+
+<div class="container" style="background: #e9ecef;">
+    <h2 id="formTitle">Register New Donor</h2>
+    <input type="hidden" id="donorId"> <div class="form-row">
+        <div><label>Donor Name / Organization</label><input type="text" id="donorName" placeholder="e.g., Tech Corp / John Doe"></div>
+        <div><label>Phone Number</label><input type="text" id="donorPhone" placeholder="e.g., 555-0199"></div>
+        <div><label>Email Address</label><input type="text" id="donorEmail" placeholder="e.g., contact@techcorp.com"></div>
+        <div>
+            <button id="saveBtn" class="btn btn-green" onclick="saveDonor()">Add Donor</button>
+            <button id="cancelBtn" class="btn btn-gray" style="display:none;" onclick="resetForm()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <h2>Registered Donors Directory</h2>
+    <table>
+        <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Email</th><th>Actions</th></tr></thead>
+        <tbody id="donorTable"><tr><td colspan="5">Loading...</td></tr></tbody>
+    </table>
+    <br><a href="/index.html" class="btn btn-gray">Back to Dashboard</a>
+</div>
+
+<script>
+    // Security check
+    const sessionStr = localStorage.getItem('session');
+    if (!sessionStr || JSON.parse(sessionStr).role !== 'Staff') { window.location.href = '/login.html'; }
+
+    let donorsList = [];
+
+    async function loadDonors() {
+        const res = await fetch('/api/donors');
+        donorsList = await res.json();
+        let html = '';
+        donorsList.forEach(d => {
+            html += `<tr>
+                <td>${d.DONOR_ID}</td><td><strong>${d.NAME_DONOR}</strong></td><td>${d.PHONE || '-'}</td><td>${d.EMAIL || '-'}</td>
+                <td>
+                    <button class="btn btn-blue" onclick="editDonor(${d.DONOR_ID})">Edit</button>
+                    <button class="btn btn-red" onclick="deleteDonor(${d.DONOR_ID})">Delete</button>
+                </td></tr>`;
+        });
+        document.getElementById('donorTable').innerHTML = html || '<tr><td colspan="5">No donors found.</td></tr>';
+    }
+
+    async function saveDonor() {
+        const id = document.getElementById('donorId').value;
+        const payload = {
+            name: document.getElementById('donorName').value.trim(),
+            phone: document.getElementById('donorPhone').value.trim(),
+            email: document.getElementById('donorEmail').value.trim()
+        };
+
+        if (!payload.name) { alert("Donor Name is required."); return; }
+
+        const url = id ? `/api/donors/${id}` : '/api/donors';
+        const method = id ? 'PUT' : 'POST';
+
+        const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (res.ok) { resetForm(); loadDonors(); }
+        else { alert("Database Error: Could not save donor."); }
+    }
+
+    function editDonor(id) {
+        const donor = donorsList.find(d => d.DONOR_ID === id);
+        if (!donor) return;
+        
+        document.getElementById('formTitle').innerText = "Edit Donor Profile";
+        document.getElementById('saveBtn').innerText = "Update Donor";
+        document.getElementById('saveBtn').className = "btn btn-blue";
+        document.getElementById('cancelBtn').style.display = "inline-block";
+        
+        document.getElementById('donorId').value = donor.DONOR_ID;
+        document.getElementById('donorName').value = donor.NAME_DONOR;
+        document.getElementById('donorPhone').value = donor.PHONE || '';
+        document.getElementById('donorEmail').value = donor.EMAIL || '';
+        window.scrollTo(0, 0); // Scroll to top
+    }
+
+    function resetForm() {
+        document.getElementById('formTitle').innerText = "Register New Donor";
+        document.getElementById('saveBtn').innerText = "Add Donor";
+        document.getElementById('saveBtn').className = "btn btn-green";
+        document.getElementById('cancelBtn').style.display = "none";
+        
+        document.getElementById('donorId').value = '';
+        document.getElementById('donorName').value = '';
+        document.getElementById('donorPhone').value = '';
+        document.getElementById('donorEmail').value = '';
+    }
+
+    async function deleteDonor(id) {
+        if (!confirm("Are you sure you want to delete this donor?")) return;
+        const res = await fetch(`/api/donors/${id}`, { method: 'DELETE' });
+        if (res.ok) loadDonors();
+        else { const err = await res.json(); alert(err.error); }
+    }
+
+    loadDonors();
+</script>
+</body>
+</html>

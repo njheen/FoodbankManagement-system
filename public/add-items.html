@@ -29,6 +29,14 @@
             <option value="">-- Leave Unassigned --</option>
             </select>
     </div>
+
+    <div style="flex: 1;">
+            <label style="font-weight:bold;">Select Donor (Origin of items):</label>
+            <select id="donorSelect" style="width:100%; padding: 10px; margin-top:5px; border-radius:4px;">
+                <option value="1">-- Anonymous / Unknown Donor --</option>
+            </select>
+        </div>
+    </div>
     
     <button class="btn btn-blue" onclick="addRow()">+ Add Another Row</button>
 
@@ -50,6 +58,18 @@
         const select = document.getElementById('staffSelect');
         staffList.forEach(s => {
             select.innerHTML += `<option value="${s.STAFF_ID}">${s.NAME_STAFF} (${s.ROLE})</option>`;
+        });
+    }
+
+    async function loadDonorDropdown() {
+        const res = await fetch('/api/donors');
+        const donorList = await res.json();
+        const select = document.getElementById('donorSelect');
+        donorList.forEach(d => {
+            // Skip the system anonymous donor (ID 1) as it's already hardcoded as default
+            if(d.DONOR_ID !== 1) {
+                select.innerHTML += `<option value="${d.DONOR_ID}">${d.NAME_DONOR}</option>`;
+            }
         });
     }
 
@@ -90,6 +110,7 @@
         const rows = document.querySelectorAll('.item-row');
         const itemsToSave = [];
         const selectedStaff = document.getElementById('staffSelect').value;
+        const selectedDonor = document.getElementById('donorSelect').value; // Get the donor
         
         // Loop through all HTML rows and extract the text
         for (let row of rows) {
@@ -115,7 +136,7 @@
             const res = await fetch('/api/items/batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ items: itemsToSave, staff_ID: selectedStaff })
+                body: JSON.stringify({ items: itemsToSave, staff_ID: selectedStaff, donor_ID: selectedDonor })
             });
 
             if (res.ok) {
@@ -138,6 +159,12 @@
 
     if (checkAuth()) {
         loadStaffDropdown(); // Load intuitive dropdown
+        addRow(); 
+    }
+
+    if (checkAuth()) {
+        loadStaffDropdown(); 
+        loadDonorDropdown(); // Call the new function
         addRow(); 
     }
     

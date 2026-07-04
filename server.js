@@ -75,39 +75,36 @@ app.get('/api/items/:id', async (req, res) => {
     finally { if (connection) await connection.close(); }
 });
 
-// 3. ADD BATCH ITEMS & ASSIGN DONATION MANAGER
+// 3. ADD BATCH ITEMS, ASSIGN DONOR & MANAGER
 app.post('/api/items/batch', async (req, res) => {
-    const { items, staff_ID } = req.body; 
+    const { items, staff_ID, donor_ID } = req.body; // <--- Now accepts donor_ID
     let connection;
     try {
         connection = await db.getPool().getConnection();
         
-        // Ensure a system Donor exists
-        const donorCheck = await connection.execute(`SELECT donor_ID FROM Donor WHERE donor_ID = 1`);
-        if (donorCheck.rows.length === 0) {
+        // Use the selected donor, or fallback to 1 (System Anonymous)
+        const finalDonorID = donor_ID || 1;
+        
+        const donorCheck = await connection.execute(`SELECT donor_ID FROM Donor WHERE donor_ID = :1`, [finalDonorID]);
+        if (donorCheck.rows.length === 0 && finalDonorID === 1) {
             await connection.execute(`INSERT INTO Donor (donor_ID, name_donor) VALUES (1, 'System Anonymous Donor')`);
         }
-        
-        // --- NEW CODE: Calculate the total quantity of all items being added ---
+
         let total_quantity = 0;
-        for (let item of items) {
-            total_quantity += parseInt(item.stock_quantity, 10) || 0;
-        }
+        for (let item of items) total_quantity += parseInt(item.stock_quantity, 10) || 0;
         
-        // Create 1 unified Donation ID and insert the TOTAL_QUANTITY
+        // Link the specific Donor ID to the donation
         const donation_ID = Math.floor(Math.random() * 90000) + 10000;
         await connection.execute(
-            `INSERT INTO Donation (donation_ID, donor_ID, status, total_quantity) VALUES (:1, 1, 'Pending', :2)`, 
-            [donation_ID, total_quantity]
+            `INSERT INTO Donation (donation_ID, donor_ID, status, total_quantity) VALUES (:1, :2, 'Pending', :3)`, 
+            [donation_ID, finalDonorID, total_quantity]
         );
         
-        // Assign the Staff Manager to this Donation
         if (staff_ID) {
             const mgmt_ID = Math.floor(Math.random() * 90000) + 10000;
             await connection.execute(`INSERT INTO Donation_Management (management_ID, staff_ID, donation_ID) VALUES (:1, :2, :3)`, [mgmt_ID, staff_ID, donation_ID]);
         }
         
-        // Insert Items and link them to the Donation
         for (let item of items) {
             const item_ID = Math.floor(Math.random() * 90000) + 10000;
             const expDate = item.expiry_date ? new Date(item.expiry_date) : null;
@@ -117,7 +114,7 @@ app.post('/api/items/batch', async (req, res) => {
             const donItemID = Math.floor(Math.random() * 90000) + 10000;
             await connection.execute(`INSERT INTO Donation_Item (donation_item_ID, donation_ID, item_ID, item_quantity) VALUES (:1, :2, :3, :4)`, [donItemID, donation_ID, item_ID, item.stock_quantity]);
         }
-        res.json({ success: true, message: "Donation added and managed successfully!" });
+        res.json({ success: true, message: "Donation added successfully!" });
     } catch (err) { res.status(500).json({ error: err.message }); }
     finally { if (connection) await connection.close(); }
 });
@@ -463,6 +460,69 @@ app.post('/api/register/staff', async (req, res) => {
     } finally {
         if (connection) await connection.close();
     }
+});
+
+
+
+// ==========================================
+// DONOR MANAGEMENT ROUTES (CRUD)
+// ==========================================
+
+// GET ALL DONORS
+app.get('/api/donors', async (req, res) => {
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        const result = await connection.execute(`SELECT * FROM Donor ORDER BY donor_ID ASC`);
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// ADD NEW DONOR
+app.post('/api/donors', async (req, res) => {
+    const { name, phone, email } = req.body;
+    const donor_ID = Math.floor(Math.random() * 90000) + 10000; 
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        await connection.execute(
+            `INSERT INTO Donor (donor_ID, name_donor, phone, email) VALUES (:1, :2, :3, :4)`,
+            [donor_ID, name, phone, email]
+        );
+        res.json({ success: true, message: "Donor added successfully!" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// UPDATE DONOR
+app.put('/api/donors/:id', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const { name, phone, email } = req.body;
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        await connection.execute(
+            `UPDATE Donor SET name_donor = :1, phone = :2, email = :3 WHERE donor_ID = :4`,
+            [name, phone, email, id]
+        );
+        res.json({ success: true, message: "Donor updated successfully!" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// DELETE DONOR
+app.delete('/api/donors/:id', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        await connection.execute(`DELETE FROM Donor WHERE donor_ID = :1`, [id]);
+        res.json({ success: true });
+    } catch (err) { 
+        res.status(500).json({ error: "Cannot delete donor. They are linked to existing donations." }); 
+    }
+    finally { if (connection) await connection.close(); }
 });
 
 
