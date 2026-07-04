@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Donation Management Overview</title>
+    <style>
+        body { font-family: Arial; margin: 40px; background: #f4f4f9; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background: #17a2b8; color: white; }
+        .btn-gray { background: #6c757d; color: white; text-decoration: none; display: inline-block; padding: 10px 15px; border-radius: 4px; margin-top:20px;}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Donation Batch Assignments (Managers & Admins)</h2>
+    <p>This page provides a top-down view of all processed donations and the staff assigned to oversee them.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Donation ID</th>
+                <th>Status</th>
+                <th>Managing Staff</th>
+                <th>Role</th>
+                <th>Total Items in Batch</th>
+            </tr>
+        </thead>
+        <tbody id="overviewTable">
+            <tr><td colspan="5">Loading...</td></tr>
+        </tbody>
+    </table>
+    <a href="/index.html" class="btn-gray">Back to Dashboard</a>
+</div>
+
+<script>
+    async function loadOverview() {
+        // We can reuse our new robust /api/items endpoint and group the data by Donation ID!
+        const res = await fetch('/api/items');
+        const data = await res.json();
+        
+        // Group items by donation
+        const grouped = {};
+        data.forEach(item => {
+            if (!item.DONATION_ID) return;
+            if (!grouped[item.DONATION_ID]) {
+                grouped[item.DONATION_ID] = {
+                    manager: item.MANAGER_NAME || 'Unassigned',
+                    itemsCount: 0
+                };
+            }
+            grouped[item.DONATION_ID].itemsCount += 1;
+        });
+
+        // Draw the table
+        let html = '';
+        for (const [donationId, details] of Object.entries(grouped)) {
+            html += `<tr>
+                <td><strong>${donationId}</strong></td>
+                <td><span style="background:#28a745; color:white; padding:3px 8px; border-radius:12px; font-size:12px;">Active</span></td>
+                <td>${details.manager}</td>
+                <td>Staff Member</td>
+                <td>${details.itemsCount} distinct items</td>
+            </tr>`;
+        }
+        document.getElementById('overviewTable').innerHTML = html || '<tr><td colspan="5">No managed donations found.</td></tr>';
+    }
+
+    // Security Check: Only Admins/Managers
+    const sessionStr = localStorage.getItem('session');
+    if (!sessionStr) window.location.href = '/login.html';
+    else {
+        const user = JSON.parse(sessionStr);
+        if (['Admin', 'Manager'].includes(user.user.ROLE)) {
+            loadOverview();
+        } else {
+            alert("Only Managers and Admins can view the overview.");
+            window.location.href = '/index.html';
+        }
+    }
+</script>
+</body>
+</html>

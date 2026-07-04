@@ -68,6 +68,8 @@
                 <th>Type</th>
                 <th>Quantity</th>
                 <th>Expiry Date</th>
+                <th style="background: #e9ecef;">Donation ID</th>
+                <th style="background: #e9ecef;">Managed By</th>
                 <th class="staff-only">Actions</th>
             </tr>
         </thead>
@@ -172,13 +174,18 @@ let currentUser = null;
         // Draw rows for the filtered data
         dataToRender.forEach(item => {
             const expDate = item.EXPIRY_DATE ? new Date(item.EXPIRY_DATE).toLocaleDateString() : 'N/A';
+            const donationID = item.DONATION_ID || 'N/A';
+            const manager = item.MANAGER_NAME || 'Unassigned';
 
             let row = `<tr>
                 <td>${item.ITEM_ID}</td>
                 <td>${item.NAME}</td>
                 <td>${item.TYPE}</td>
                 <td><strong>${item.STOCK_QUANTITY}</strong></td>
-                <td>${expDate}</td>`;
+                <td>${expDate}</td>;
+                <td style="color:#0056b3; font-weight:bold;">${donationID}</td>
+                <td>${manager}</td>`;
+                
             
             // Check session to see if we should show Staff Actions (Edit/Delete)
             const sessionData = localStorage.getItem('session');

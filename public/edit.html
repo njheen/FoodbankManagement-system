@@ -39,6 +39,14 @@
             <input type="date" id="editExpiry" placeholder="Loading...">
         </div>
 
+        
+        <div class="form-group">
+            <label>Reassign Managing Staff</label>
+            <select id="editStaff" style="width:100%; padding:10px;">
+                <option value="">-- Unassigned --</option>
+            </select>
+        </div>
+
         <button class="btn btn-green" onclick="saveItem()">Save Changes</button>
         <a href="/index.html" class="btn btn-gray">Cancel</a>
     </div>
@@ -74,6 +82,16 @@
         }
         
         try {
+
+            // 1. Load the dropdown options first
+            const staffRes = await fetch('/api/staff/list');
+            const staffList = await staffRes.json();
+            const select = document.getElementById('editStaff');
+            staffList.forEach(s => {
+                select.innerHTML += `<option value="${s.STAFF_ID}">${s.NAME_STAFF} (${s.ROLE})</option>`;
+            });
+
+            // 2. Load the item data
             const response = await fetch(`/api/items/${itemId}`);
             if (response.ok) {
                 const item = await response.json();
@@ -81,7 +99,7 @@
                 document.getElementById('editName').value = item.NAME;
                 document.getElementById('editType').value = item.TYPE;
                 document.getElementById('editQty').value = item.STOCK_QUANTITY;
-                
+                if (item.STAFF_ID) document.getElementById('editStaff').value = item.STAFF_ID;
                 // Pre-fill the expiry date if it exists
                 if (item.EXPIRY_DATE) {
                     const d = new Date(item.EXPIRY_DATE);
@@ -107,6 +125,8 @@
         const newQty = document.getElementById('editQty').value;
         const newExpiry = document.getElementById('editExpiry').value; // Get the date
 
+    
+
         // Basic validation
         if (!newName || !newType || !newQty) {
             alert("Please fill out all fields.");
@@ -117,11 +137,13 @@
             const res = await fetch(`/api/items/${itemId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                     name: newName,
-                     type: newType, 
-                     stock_quantity: newQty,
-                     expiry_date: newExpiry })
+                body: JSON.stringify({ 
+                    name: newName, 
+                    type: newType, 
+                    stock_quantity: newQty,
+                    expiry_date: newExpiry,
+                    staff_ID: document.getElementById('editStaff').value 
+                })
             });
 
             if (res.ok) {

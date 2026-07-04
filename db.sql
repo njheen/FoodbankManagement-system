@@ -145,5 +145,10 @@ VALUES (103, 'Harith', 'Volunteer', 'charlie.b@example.com');
 INSERT INTO Staff (staff_ID, name_staff, role, contact_staff) 
 VALUES (104, 'Hilmi', 'Manager', '555-0199');
 
+
+-- Insert a system administrator account for initial setup
+INSERT INTO Staff (staff_ID, name_staff, role, contact_staff) 
+VALUES (99999, 'System Administrator', 'Admin', 'admin@donationsystem.com');
+
 -- Commit the transaction to save changes
 COMMIT;

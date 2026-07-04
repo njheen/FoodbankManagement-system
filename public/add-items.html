@@ -22,6 +22,13 @@
 <div class="container">
     <h2>Add New Inventory Items</h2>
     <p>Fill out the item details below. You can add multiple items at once.</p>
+
+    <div style="background: #e9ecef; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <label style="font-weight:bold;">Assign Staff to Manage this Donation Batch:</label>
+        <select id="staffSelect" style="width:100%; padding: 10px; margin-top:5px; border-radius:4px;">
+            <option value="">-- Leave Unassigned --</option>
+            </select>
+    </div>
     
     <button class="btn btn-blue" onclick="addRow()">+ Add Another Row</button>
 
@@ -35,6 +42,18 @@
 </div>
 
 <script>
+
+    // Load staff list into the dropdown
+    async function loadStaffDropdown() {
+        const res = await fetch('/api/staff/list');
+        const staffList = await res.json();
+        const select = document.getElementById('staffSelect');
+        staffList.forEach(s => {
+            select.innerHTML += `<option value="${s.STAFF_ID}">${s.NAME_STAFF} (${s.ROLE})</option>`;
+        });
+    }
+
+
     // 1. Security Check (Only Staff should add items)
     function checkAuth() {
         const sessionData = localStorage.getItem('session');
@@ -70,6 +89,7 @@
     async function saveItems() {
         const rows = document.querySelectorAll('.item-row');
         const itemsToSave = [];
+        const selectedStaff = document.getElementById('staffSelect').value;
         
         // Loop through all HTML rows and extract the text
         for (let row of rows) {
@@ -95,7 +115,7 @@
             const res = await fetch('/api/items/batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ items: itemsToSave })
+                body: JSON.stringify({ items: itemsToSave, staff_ID: selectedStaff })
             });
 
             if (res.ok) {
@@ -115,6 +135,12 @@
     if (checkAuth()) {
         addRow(); // Automatically create the very first empty row for the user
     }
+
+    if (checkAuth()) {
+        loadStaffDropdown(); // Load intuitive dropdown
+        addRow(); 
+    }
+    
 </script>
 
 </body>

@@ -21,19 +21,138 @@ db.initialize().then(() => {
 // API ROUTES
 // ==========================================
 
-// 1. GET ALL ITEMS (Inventory)
+// ==========================================
+// INVENTORY & DONATION ASSIGNMENT ROUTES
+// ==========================================
+
+// HELPER: GET ALL STAFF FOR DROPDOWNS
+app.get('/api/staff/list', async (req, res) => {
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        // Fetch staff who can manage things
+        const result = await connection.execute(`SELECT staff_ID, name_staff, role FROM Staff WHERE role IN ('Admin', 'Manager', 'Coordinator', 'Staff')`);
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// 1. GET ALL ITEMS (Now joins with Donations and Staff)
 app.get('/api/items', async (req, res) => {
     let connection;
     try {
         connection = await db.getPool().getConnection();
-        const result = await connection.execute(`SELECT * FROM Item ORDER BY item_ID ASC`);
+        const result = await connection.execute(`
+            SELECT i.item_ID, i.name, i.type, i.stock_quantity, i.expiry_date, 
+                   di.donation_ID, dm.staff_ID, s.name_staff as manager_name
+            FROM Item i
+            LEFT JOIN Donation_Item di ON i.item_ID = di.item_ID
+            LEFT JOIN Donation_Management dm ON di.donation_ID = dm.donation_ID
+            LEFT JOIN Staff s ON dm.staff_ID = s.staff_ID
+            ORDER BY i.item_ID ASC
+        `);
         res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    } finally {
-        if (connection) await connection.close();
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
 });
+
+// 2. GET SINGLE ITEM (For Prefill, including assigned staff)
+app.get('/api/items/:id', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        const result = await connection.execute(`
+            SELECT i.*, di.donation_ID, dm.staff_ID
+            FROM Item i
+            LEFT JOIN Donation_Item di ON i.item_ID = di.item_ID
+            LEFT JOIN Donation_Management dm ON di.donation_ID = dm.donation_ID
+            WHERE i.item_ID = :1
+        `, [id]);
+        if (result.rows.length > 0) res.json(result.rows[0]);
+        else res.status(404).json({ error: "Item not found" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// 3. ADD BATCH ITEMS & ASSIGN DONATION MANAGER
+app.post('/api/items/batch', async (req, res) => {
+    const { items, staff_ID } = req.body; 
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        
+        // Ensure a system Donor exists
+        const donorCheck = await connection.execute(`SELECT donor_ID FROM Donor WHERE donor_ID = 1`);
+        if (donorCheck.rows.length === 0) {
+            await connection.execute(`INSERT INTO Donor (donor_ID, name_donor) VALUES (1, 'System Anonymous Donor')`);
+        }
+        
+        // --- NEW CODE: Calculate the total quantity of all items being added ---
+        let total_quantity = 0;
+        for (let item of items) {
+            total_quantity += parseInt(item.stock_quantity, 10) || 0;
+        }
+        
+        // Create 1 unified Donation ID and insert the TOTAL_QUANTITY
+        const donation_ID = Math.floor(Math.random() * 90000) + 10000;
+        await connection.execute(
+            `INSERT INTO Donation (donation_ID, donor_ID, status, total_quantity) VALUES (:1, 1, 'Pending', :2)`, 
+            [donation_ID, total_quantity]
+        );
+        
+        // Assign the Staff Manager to this Donation
+        if (staff_ID) {
+            const mgmt_ID = Math.floor(Math.random() * 90000) + 10000;
+            await connection.execute(`INSERT INTO Donation_Management (management_ID, staff_ID, donation_ID) VALUES (:1, :2, :3)`, [mgmt_ID, staff_ID, donation_ID]);
+        }
+        
+        // Insert Items and link them to the Donation
+        for (let item of items) {
+            const item_ID = Math.floor(Math.random() * 90000) + 10000;
+            const expDate = item.expiry_date ? new Date(item.expiry_date) : null;
+            
+            await connection.execute(`INSERT INTO Item (item_ID, name, type, stock_quantity, expiry_date) VALUES (:1, :2, :3, :4, :5)`, [item_ID, item.name, item.type, item.stock_quantity, expDate]);
+            
+            const donItemID = Math.floor(Math.random() * 90000) + 10000;
+            await connection.execute(`INSERT INTO Donation_Item (donation_item_ID, donation_ID, item_ID, item_quantity) VALUES (:1, :2, :3, :4)`, [donItemID, donation_ID, item_ID, item.stock_quantity]);
+        }
+        res.json({ success: true, message: "Donation added and managed successfully!" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// 4. UPDATE ITEM & REASSIGN STAFF
+app.put('/api/items/:id', async (req, res) => {
+    const item_ID = parseInt(req.params.id, 10);
+    const { name, type, stock_quantity, expiry_date, staff_ID } = req.body;
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        const expDate = expiry_date ? new Date(expiry_date) : null;
+        
+        // 1. Update the Item stats
+        await connection.execute(`UPDATE Item SET name = :1, type = :2, stock_quantity = :3, expiry_date = :4 WHERE item_ID = :5`, [name, type, stock_quantity, expDate, item_ID]);
+        
+        // 2. Reassign the Staff (Find the donation, then update management)
+        const donItem = await connection.execute(`SELECT donation_ID FROM Donation_Item WHERE item_ID = :1`, [item_ID]);
+        if (donItem.rows.length > 0 && staff_ID) {
+            const don_ID = donItem.rows[0].DONATION_ID;
+            const mgmtCheck = await connection.execute(`SELECT management_ID FROM Donation_Management WHERE donation_ID = :1`, [don_ID]);
+            
+            if (mgmtCheck.rows.length > 0) {
+                await connection.execute(`UPDATE Donation_Management SET staff_ID = :1 WHERE donation_ID = :2`, [staff_ID, don_ID]);
+            } else {
+                const mgmt_ID = Math.floor(Math.random() * 90000) + 10000;
+                await connection.execute(`INSERT INTO Donation_Management (management_ID, staff_ID, donation_ID) VALUES (:1, :2, :3)`, [mgmt_ID, staff_ID, don_ID]);
+            }
+        }
+        res.json({ message: "Item updated successfully!" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+
 
 // 2. ADD A NEW ITEM
 app.post('/api/items', async (req, res) => {
@@ -105,48 +224,10 @@ app.post('/api/donations', async (req, res) => {
 // --- INVENTORY CRUD EXTRAS ---
 
 
-// GET A SINGLE ITEM (For pre-filling the edit page)
-app.get('/api/items/:id', async (req, res) => {
-    const { id } = req.params;
-    let connection;
-    try {
-        connection = await db.getPool().getConnection();
-        const result = await connection.execute(`SELECT * FROM Item WHERE item_ID = :1`, [id]);
-        
-        if (result.rows.length > 0) {
-            res.json(result.rows[0]);
-        } else {
-            res.status(404).json({ error: "Item not found" });
-        }
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    } finally {
-        if (connection) await connection.close();
-    }
-});
 
 
-// UPDATE AN ITEM (PUT)
-app.put('/api/items/:id', async (req, res) => {
-    const { id } = req.params;
-    const { name, type, stock_quantity, expiry_date } = req.body;
-    let connection;
-    try {
-        connection = await db.getPool().getConnection();
-        // Convert string to Date object for Oracle, or set to null if blank
-        const expDate = expiry_date ? new Date(expiry_date) : null; 
-        
-        await connection.execute(
-            `UPDATE Item SET name = :1, type = :2, stock_quantity = :3, expiry_date = :4 WHERE item_ID = :5`,
-            [name, type, stock_quantity, expDate, id]
-        );
-        res.json({ message: "Item updated successfully!" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    } finally {
-        if (connection) await connection.close();
-    }
-});
+
+
 
 // DELETE AN ITEM (DELETE)
 app.delete('/api/items/:id', async (req, res) => {
@@ -360,33 +441,6 @@ app.post('/api/register/staff', async (req, res) => {
 });
 
 
-// ADD MULTIPLE ITEMS AT ONCE (Batch Insert)
-app.post('/api/items/batch', async (req, res) => {
-    const { items } = req.body; // Expects an array of items from the frontend
-    let connection;
-    try {
-        connection = await db.getPool().getConnection();
-        
-        // Loop through the array and insert each item
-        for (let item of items) {
-            // Generate a random 5-digit item_ID (similar to how Recipient IDs are handled)
-            const item_ID = Math.floor(Math.random() * 90000) + 10000;
-            const expDate = item.expiry_date ? new Date(item.expiry_date) : null; 
-            
-            await connection.execute(
-                `INSERT INTO Item (item_ID, name, type, stock_quantity, expiry_date) VALUES (:1, :2, :3, :4, :5)`,
-                [item_ID, item.name, item.type, item.stock_quantity, expDate]
-            );
-        }
-        
-        res.json({ success: true, message: "All items added successfully!" });
-    } catch (err) {
-        console.error("Batch Insert Error:", err.message);
-        res.status(500).json({ error: err.message });
-    } finally {
-        if (connection) await connection.close();
-    }
-});
 
 
 
