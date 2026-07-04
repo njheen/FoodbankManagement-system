@@ -246,34 +246,59 @@ app.delete('/api/items/:id', async (req, res) => {
 });
 
 
-// --- AUTHENTICATION & REGISTRATION ---
-
-// UNIFIED LOGIN (Staff & Recipient)
+// ==========================================
+// LOGIN ROUTE
+// ==========================================
 app.post('/api/login', async (req, res) => {
     const { login_ID, role } = req.body;
     let connection;
     try {
         connection = await db.getPool().getConnection();
-        let result;
+        let result = { rows: [] };
         
+        // Clean the input to remove accidental spaces
+        const loginStr = String(login_ID).trim(); 
+        
+        // Check if the input is purely numbers (could be an ID or a phone number)
+        const isNumeric = /^[0-9]+$/.test(loginStr);
+
         if (role === 'Staff') {
-            result = await connection.execute(`SELECT * FROM Staff WHERE staff_ID = :1`, [login_ID]);
+            // Staff still use strictly numeric IDs
+            if (isNumeric) {
+                result = await connection.execute(
+                    `SELECT * FROM Staff WHERE staff_ID = :1`, 
+                    [parseInt(loginStr, 10)]
+                );
+            }
         } else if (role === 'Recipient') {
-            result = await connection.execute(`SELECT * FROM Recipient WHERE recipient_ID = :1`, [login_ID]);
+            // Recipients can use ID, Email, or Phone
+            if (isNumeric) {
+                // Input is numbers: Check if it matches an ID OR a phone number
+                result = await connection.execute(
+                    `SELECT * FROM Recipient WHERE recipient_ID = :1 OR contact_recipient = :2`, 
+                    [parseInt(loginStr, 10), loginStr]
+                );
+            } else {
+                // Input contains text (e.g., email): Only search the contact column
+                result = await connection.execute(
+                    `SELECT * FROM Recipient WHERE contact_recipient = :1`, 
+                    [loginStr]
+                );
+            }
         }
 
         if (result.rows.length > 0) {
             res.json({ success: true, user: result.rows[0], role: role });
         } else {
-            res.status(401).json({ success: false, error: "Invalid ID or Role not found." });
+            res.status(401).json({ success: false, error: "Invalid Login details. Please try again." });
         }
     } catch (err) {
+        console.error("Login Error:", err.message);
         res.status(500).json({ error: err.message });
     } finally {
         if (connection) await connection.close();
     }
 });
-
 
 
 
