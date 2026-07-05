@@ -120,7 +120,7 @@ app.post('/api/items/batch', async (req, res) => {
 });
 
 // 4. UPDATE ITEM & REASSIGN STAFF
-// 4. UPDATE ITEM & REASSIGN STAFF
+// 4. UPDATE ITEM & REASSIGN / UNASSIGN STAFF
 app.put('/api/items/:id', async (req, res) => {
     const item_ID = parseInt(req.params.id, 10);
     const { name, type, stock_quantity, expiry_date, staff_ID } = req.body;
@@ -129,33 +129,45 @@ app.put('/api/items/:id', async (req, res) => {
         connection = await db.getPool().getConnection();
         const expDate = expiry_date ? new Date(expiry_date) : null;
         
-        // 1. Update the Item details (Force Save)
+        // 1. Update the Item details
         await connection.execute(
             `UPDATE Item SET name = :1, type = :2, stock_quantity = :3, expiry_date = :4 WHERE item_ID = :5`, 
             [name, type, stock_quantity, expDate, item_ID], 
             { autoCommit: true }
         );
         
-        // 2. Update the Donation Management link
+        // 2. Manage the Donation Assignment link
         const donItem = await connection.execute(`SELECT donation_ID FROM Donation_Item WHERE item_ID = :1`, [item_ID]);
         
-        if (donItem.rows.length > 0 && staff_ID) {
+        if (donItem.rows.length > 0) {
             const don_ID = donItem.rows[0].DONATION_ID;
-            const parsedStaffId = parseInt(staff_ID, 10); // Force the ID into a math integer
             
-            const mgmtCheck = await connection.execute(`SELECT management_ID FROM Donation_Management WHERE donation_ID = :1`, [don_ID]);
-            
-            if (mgmtCheck.rows.length > 0) {
-                await connection.execute(
-                    `UPDATE Donation_Management SET staff_ID = :1 WHERE donation_ID = :2`, 
-                    [parsedStaffId, don_ID], 
-                    { autoCommit: true }
-                );
+            // Check if the user selected a specific staff member, OR selected "-- Unassigned --"
+            if (staff_ID && staff_ID !== "") {
+                // A staff member was selected. Update or Insert the link.
+                const parsedStaffId = parseInt(staff_ID, 10);
+                const mgmtCheck = await connection.execute(`SELECT management_ID FROM Donation_Management WHERE donation_ID = :1`, [don_ID]);
+                
+                if (mgmtCheck.rows.length > 0) {
+                    await connection.execute(
+                        `UPDATE Donation_Management SET staff_ID = :1 WHERE donation_ID = :2`, 
+                        [parsedStaffId, don_ID], 
+                        { autoCommit: true }
+                    );
+                } else {
+                    const mgmt_ID = Math.floor(Math.random() * 90000) + 10000;
+                    await connection.execute(
+                        `INSERT INTO Donation_Management (management_ID, staff_ID, donation_ID) VALUES (:1, :2, :3)`, 
+                        [mgmt_ID, parsedStaffId, don_ID], 
+                        { autoCommit: true }
+                    );
+                }
             } else {
-                const mgmt_ID = Math.floor(Math.random() * 90000) + 10000;
+                // The user explicitly selected "-- Unassigned --" (which sends an empty staff_ID).
+                // Delete the management link entirely so the system knows nobody is managing it.
                 await connection.execute(
-                    `INSERT INTO Donation_Management (management_ID, staff_ID, donation_ID) VALUES (:1, :2, :3)`, 
-                    [mgmt_ID, parsedStaffId, don_ID], 
+                    `DELETE FROM Donation_Management WHERE donation_ID = :1`, 
+                    [don_ID], 
                     { autoCommit: true }
                 );
             }
@@ -408,16 +420,24 @@ app.put('/api/admin/recipients/:id', async (req, res) => {
     finally { if (connection) await connection.close(); }
 });
 
-// 7. DELETE STAFF
+// 7. DELETE STAFF (And unassign their donations)
 app.delete('/api/admin/staff/:id', async (req, res) => {
     const id = parseInt(req.params.id, 10);
     let connection;
     try {
         connection = await db.getPool().getConnection();
-        await connection.execute(`DELETE FROM Staff WHERE staff_ID = :1`, [id]);
+        
+        // STEP 1: Find any donations this staff member is managing, and delete the management link. 
+        // Because of your LEFT JOINs, deleting this link automatically reverts the donation to "Unassigned"!
+        await connection.execute(`DELETE FROM Donation_Management WHERE staff_ID = :1`, [id], { autoCommit: true });
+
+        // STEP 2: Now that they are safely unlinked, delete the staff member.
+        await connection.execute(`DELETE FROM Staff WHERE staff_ID = :1`, [id], { autoCommit: true });
+        
         res.json({ success: true });
     } catch (err) { 
-        res.status(500).json({ error: "Cannot delete staff. They may be linked to a donation." }); 
+        console.error(err);
+        res.status(500).json({ error: "Cannot delete staff: " + err.message }); 
     }
     finally { if (connection) await connection.close(); }
 });
