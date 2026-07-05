@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Donation System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f9; }
         .header { display: flex; justify-content: space-between; align-items: center; background: #0056b3; color: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px;}
@@ -53,6 +54,13 @@
 
     </div>
 
+    <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+        <h3 style="margin-top: 0; color: #333; font-size: 16px; text-transform: uppercase;">Inventory Distribution by Type</h3>
+        <div style="width: 100%; max-width: 350px;">
+            <canvas id="inventoryChart"></canvas>
+        </div>
+    </div>
+
     </div>
 
         <!-- code for displaying search and filter options -->
@@ -99,6 +107,65 @@
 <script>
 let currentUser = null;
     let currentInventory = []; // NEW: We will store the data here so strings don't break our HTML!
+
+    //this function is to generate chart for displaying food type
+    // This variable will hold the Chart.js instance so we can destroy and redraw it when needed
+    let inventoryChartInstance = null; // Keeps track of the chart so we can redraw it safely
+
+    // FUNCTION TO RENDER THE DONUT GRAPH
+    function renderChart(data) {
+        // 1. Group the data by Item Type and calculate total quantities
+        const typeCounts = {};
+        data.forEach(item => {
+            const type = item.TYPE || 'Unknown';
+            const qty = parseInt(item.STOCK_QUANTITY, 10) || 0;
+            
+            if (typeCounts[type]) {
+                typeCounts[type] += qty;
+            } else {
+                typeCounts[type] = qty;
+            }
+        });
+
+        const labels = Object.keys(typeCounts);
+        const values = Object.values(typeCounts);
+
+        // 2. Dynamically generate beautiful colors based on how many types exist
+        const backgroundColors = labels.map((_, index) => {
+            // This spreads the colors evenly across the color wheel
+            const hue = (index * 360) / labels.length; 
+            return `hsl(${hue}, 70%, 55%)`; 
+        });
+
+        // 3. Draw the Chart
+        const ctx = document.getElementById('inventoryChart').getContext('2d');
+        
+        // If a chart already exists (e.g., after a refresh), destroy it first to prevent glitches
+        if (inventoryChartInstance) {
+            inventoryChartInstance.destroy();
+        }
+
+        inventoryChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom', // Puts the labels neatly under the donut
+                    }
+                }
+            }
+        });
+    }
 
     // 1. CHECK AUTHENTICATION ON LOAD
     function checkAuth() {
@@ -157,8 +224,12 @@ let currentUser = null;
             const res = await fetch('/api/items');
             currentInventory = await res.json();
             
-            // Draw the table with the full inventory initially
+            // Draw the table with the full inventory
             applyFilters(); 
+            
+            // --> NEW: Draw the graph based on the fetched database inventory <--
+            renderChart(currentInventory); 
+            
         } catch (error) {
             console.error("Error loading items:", error);
         }
