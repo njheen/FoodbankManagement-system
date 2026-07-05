@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Donor Profile - Donation System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f9; display: flex; justify-content: center;}
+        .card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center;}
+        .avatar { background: #28a745; color: white; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; margin: 0 auto 20px; }
+        .info-group { margin-bottom: 20px; text-align: left; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #eee;}
+        .info-group label { display: block; font-size: 12px; color: #777; text-transform: uppercase; font-weight: bold; margin-bottom: 5px;}
+        .info-group div { font-size: 18px; color: #333; font-weight: bold;}
+        .btn-gray { background: #6c757d; color: white; text-decoration: none; display: block; padding: 12px; border-radius: 4px; margin-top: 30px; font-weight: bold;}
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="avatar">👥</div>
+    <h2 id="dName" style="margin-top: 0; color: #333;">Loading...</h2>
+    <p style="color: #666; margin-bottom: 30px;">Donor Information Profile</p>
+
+    <div class="info-group">
+        <label>System Donor ID</label>
+        <div id="dId">--</div>
+    </div>
+    
+    <div class="info-group">
+        <label>Phone Number</label>
+        <div id="dPhone">--</div>
+    </div>
+
+    <div class="info-group">
+        <label>Email Address</label>
+        <div id="dEmail">--</div>
+    </div>
+
+    <a href="javascript:history.back()" class="btn-gray">← Return to Overview</a>
+</div>
+
+<script>
+    // Get the ID from the URL (e.g. ?id=12345)
+    const urlParams = new URLSearchParams(window.location.search);
+    const donorId = urlParams.get('id');
+
+    async function loadDonorProfile() {
+        if (!donorId) {
+            document.getElementById('dName').innerText = "Error: No ID Provided";
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/donors/${donorId}`);
+            if (res.ok) {
+                const donor = await res.json();
+                
+                // Populate the UI
+                document.getElementById('dName').innerText = donor.NAME_DONOR;
+                document.getElementById('dId').innerText = donor.DONOR_ID;
+                document.getElementById('dPhone').innerText = donor.PHONE || "No phone provided";
+                document.getElementById('dEmail').innerText = donor.EMAIL || "No email provided";
+                
+            } else {
+                document.getElementById('dName').innerText = "Donor Not Found";
+            }
+        } catch (error) {
+            console.error(error);
+            document.getElementById('dName').innerText = "Connection Error";
+        }
+    }
+
+    loadDonorProfile();
+</script>
+</body>
+</html>

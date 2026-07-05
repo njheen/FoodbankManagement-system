@@ -525,6 +525,54 @@ app.delete('/api/donors/:id', async (req, res) => {
     finally { if (connection) await connection.close(); }
 });
 
+// ==========================================
+// DONATION OVERVIEW & STATUS ROUTES
+// ==========================================
+
+// 1. GET ALL DONATIONS (For Overview Page)
+app.get('/api/donations', async (req, res) => {
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        const result = await connection.execute(`
+            SELECT d.donation_ID, d.status, d.total_quantity, d.donor_ID, 
+                   dn.name_donor, dm.staff_ID, s.name_staff as manager_name
+            FROM Donation d
+            LEFT JOIN Donor dn ON d.donor_ID = dn.donor_ID
+            LEFT JOIN Donation_Management dm ON d.donation_ID = dm.donation_ID
+            LEFT JOIN Staff s ON dm.staff_ID = s.staff_ID
+            ORDER BY d.donation_ID DESC
+        `);
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// 2. UPDATE DONATION STATUS
+app.put('/api/donations/:id/status', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const { status } = req.body;
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        await connection.execute(`UPDATE Donation SET status = :1 WHERE donation_ID = :2`, [status, id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
+// 3. GET A SINGLE DONOR (For View Page)
+app.get('/api/donors/:id', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        const result = await connection.execute(`SELECT * FROM Donor WHERE donor_ID = :1`, [id]);
+        if (result.rows.length > 0) res.json(result.rows[0]);
+        else res.status(404).json({ error: "Donor not found" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
 
 
 

@@ -152,3 +152,11 @@ VALUES (99999, 'System Administrator', 'Admin', 'admin@donationsystem.com');
 
 -- Commit the transaction to save changes
 COMMIT;
+
+
+-- alter the status constraint to include the new statuses
+ALTER TABLE Donation DROP CONSTRAINT chk_status;
+
+ALTER TABLE Donation ADD CONSTRAINT chk_status CHECK (status IN ('Pending', 'Approve', 'Active', 'Completed', 'Cancelled'));
+
+COMMIT;

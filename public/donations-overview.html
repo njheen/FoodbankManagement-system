@@ -5,26 +5,28 @@
     <title>Donation Management Overview</title>
     <style>
         body { font-family: Arial; margin: 40px; background: #f4f4f9; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
-        th { background: #17a2b8; color: white; }
+        th { background: #6f42c1; color: white; }
+        .status-select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; width: 100%;}
+        .btn-blue { background: #007bff; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;}
         .btn-gray { background: #6c757d; color: white; text-decoration: none; display: inline-block; padding: 10px 15px; border-radius: 4px; margin-top:20px;}
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Donation Batch Assignments (Managers & Admins)</h2>
-    <p>This page provides a top-down view of all processed donations and the staff assigned to oversee them.</p>
+    <h2>Donation Batch Assignments</h2>
+    <p>Manage the processing status of received donations and view donor origins.</p>
     <table>
         <thead>
             <tr>
                 <th>Donation ID</th>
-                <th>Status</th>
                 <th>Managing Staff</th>
-                <th>Role</th>
-                <th>Total Items in Batch</th>
+                <th>Total Items</th>
+                <th>Batch Status</th>
+                <th>Origin Data</th>
             </tr>
         </thead>
         <tbody id="overviewTable">
@@ -35,39 +37,7 @@
 </div>
 
 <script>
-    async function loadOverview() {
-        // We can reuse our new robust /api/items endpoint and group the data by Donation ID!
-        const res = await fetch('/api/items');
-        const data = await res.json();
-        
-        // Group items by donation
-        const grouped = {};
-        data.forEach(item => {
-            if (!item.DONATION_ID) return;
-            if (!grouped[item.DONATION_ID]) {
-                grouped[item.DONATION_ID] = {
-                    manager: item.MANAGER_NAME || 'Unassigned',
-                    itemsCount: 0
-                };
-            }
-            grouped[item.DONATION_ID].itemsCount += 1;
-        });
-
-        // Draw the table
-        let html = '';
-        for (const [donationId, details] of Object.entries(grouped)) {
-            html += `<tr>
-                <td><strong>${donationId}</strong></td>
-                <td><span style="background:#28a745; color:white; padding:3px 8px; border-radius:12px; font-size:12px;">Active</span></td>
-                <td>${details.manager}</td>
-                <td>Staff Member</td>
-                <td>${details.itemsCount} distinct items</td>
-            </tr>`;
-        }
-        document.getElementById('overviewTable').innerHTML = html || '<tr><td colspan="5">No managed donations found.</td></tr>';
-    }
-
-    // Security Check: Only Admins/Managers
+    // Security Check
     const sessionStr = localStorage.getItem('session');
     if (!sessionStr) window.location.href = '/login.html';
     else {
@@ -77,6 +47,67 @@
         } else {
             alert("Only Managers and Admins can view the overview.");
             window.location.href = '/index.html';
+        }
+    }
+
+    // Load the Table
+    async function loadOverview() {
+        const res = await fetch('/api/donations');
+        const data = await res.json();
+        
+        let html = '';
+        data.forEach(d => {
+            const manager = d.MANAGER_NAME || 'Unassigned';
+            const totalQty = d.TOTAL_QUANTITY || 0;
+            const donorId = d.DONOR_ID;
+            
+            // Generate color based on status
+            let selectStyle = "color: black;";
+            if(d.STATUS === 'Pending') selectStyle = "color: #d39e00;"; // Yellowish
+            if(d.STATUS === 'Approve') selectStyle = "color: #17a2b8;"; // Teal
+            if(d.STATUS === 'Active') selectStyle = "color: #28a745;";  // Green
+            if(d.STATUS === 'Completed') selectStyle = "color: #0056b3;"; // Dark Blue
+            if(d.STATUS === 'Cancelled') selectStyle = "color: #dc3545;"; // Red
+
+            html += `<tr>
+                <td><strong>${d.DONATION_ID}</strong></td>
+                <td>${manager}</td>
+                <td>${totalQty} units</td>
+                
+                <td>
+                    <select class="status-select" style="${selectStyle}" onchange="updateStatus(${d.DONATION_ID}, this.value)">
+                        <option value="Pending" ${d.STATUS === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option value="Approve" ${d.STATUS === 'Approve' ? 'selected' : ''}>Approve</option>
+                        <option value="Active" ${d.STATUS === 'Active' ? 'selected' : ''}>Active</option>
+                        <option value="Completed" ${d.STATUS === 'Completed' ? 'selected' : ''}>Completed</option>
+                        <option value="Cancelled" ${d.STATUS === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                    </select>
+                </td>
+                
+                <td>
+                    <button class="btn-blue" onclick="window.location.href='/view-donor.html?id=${donorId}'">View Donor</button>
+                </td>
+            </tr>`;
+        });
+        document.getElementById('overviewTable').innerHTML = html || '<tr><td colspan="5">No donations found.</td></tr>';
+    }
+
+    // Update Status Function
+    async function updateStatus(donationId, newStatus) {
+        try {
+            const res = await fetch(`/api/donations/${donationId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (res.ok) {
+                // Refresh table to apply new color styles immediately
+                loadOverview(); 
+            } else {
+                alert("Failed to update status. Check database constraints.");
+            }
+        } catch(err) {
+            console.error(err);
         }
     }
 </script>
