@@ -76,6 +76,7 @@
 
     <h3>Available Food Inventory</h3>
     <table>
+
         <thead>
             <tr>
                 <th>ID</th>
@@ -83,11 +84,13 @@
                 <th>Type</th>
                 <th>Quantity</th>
                 <th>Expiry Date</th>
-                <th style="background: #e9ecef;">Donation ID</th>
-                <th style="background: #e9ecef;">Managed By</th>
-                <th class="staff-only">Actions</th>
+                
+                <th class="staff-only" style="display: none; background: #e9ecef;">Donation ID</th>
+                <th class="staff-only" style="display: none; background: #e9ecef;">Managed By</th>
+                <th class="staff-only" style="display: none;">Actions</th>
             </tr>
         </thead>
+
         <tbody id="inventoryTable">
             </tbody>
     </table>
@@ -198,34 +201,39 @@ let currentUser = null;
             return;
         }
 
-        // Draw rows for the filtered data
+// Draw rows for the filtered data
         dataToRender.forEach(item => {
             const expDate = item.EXPIRY_DATE ? new Date(item.EXPIRY_DATE).toLocaleDateString() : 'N/A';
             const donationID = item.DONATION_ID || 'N/A';
             const manager = item.MANAGER_NAME || 'Unassigned';
 
+            // 1. Base row (Everyone sees this - ID, Name, Type, Qty, Expiry)
             let row = `<tr>
                 <td>${item.ITEM_ID}</td>
                 <td>${item.NAME}</td>
                 <td>${item.TYPE}</td>
                 <td><strong>${item.STOCK_QUANTITY}</strong></td>
-                <td>${expDate}</td>;
-                <td style="color:#0056b3; font-weight:bold;">${donationID}</td>
-                <td>${manager}</td>`;
-                
+                <td>${expDate}</td>`;
             
-            // Check session to see if we should show Staff Actions (Edit/Delete)
+            // 2. Check session 
             const sessionData = localStorage.getItem('session');
             const currentUser = sessionData ? JSON.parse(sessionData) : null;
             
+            // 3. Conditionally add internal info & buttons ONLY for Staff
             if (currentUser && currentUser.role === 'Staff') {
-                row += `<td class="staff-only" style="display:table-cell;">
+                row += `<td class="staff-only" style="display:table-cell; color:#0056b3; font-weight:bold;">${donationID}</td>
+                        <td class="staff-only" style="display:table-cell;">${manager}</td>
+                        <td class="staff-only" style="display:table-cell;">
                             <button class="btn btn-blue" onclick="editItem(${item.ITEM_ID})">Edit</button>
                             <button class="btn btn-red" onclick="deleteItem(${item.ITEM_ID})">Delete</button>
                         </td>`;
             } else {
-                row += `<td class="staff-only" style="display:none;"></td>`;
+                // If it's a Recipient, generate hidden empty columns to keep the table structure intact
+                row += `<td class="staff-only" style="display:none;"></td>
+                        <td class="staff-only" style="display:none;"></td>
+                        <td class="staff-only" style="display:none;"></td>`;
             }
+            
             row += `</tr>`;
             tbody.innerHTML += row;
         });
