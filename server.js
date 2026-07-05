@@ -120,6 +120,7 @@ app.post('/api/items/batch', async (req, res) => {
 });
 
 // 4. UPDATE ITEM & REASSIGN STAFF
+// 4. UPDATE ITEM & REASSIGN STAFF
 app.put('/api/items/:id', async (req, res) => {
     const item_ID = parseInt(req.params.id, 10);
     const { name, type, stock_quantity, expiry_date, staff_ID } = req.body;
@@ -128,27 +129,44 @@ app.put('/api/items/:id', async (req, res) => {
         connection = await db.getPool().getConnection();
         const expDate = expiry_date ? new Date(expiry_date) : null;
         
-        // 1. Update the Item stats
-        await connection.execute(`UPDATE Item SET name = :1, type = :2, stock_quantity = :3, expiry_date = :4 WHERE item_ID = :5`, [name, type, stock_quantity, expDate, item_ID]);
+        // 1. Update the Item details (Force Save)
+        await connection.execute(
+            `UPDATE Item SET name = :1, type = :2, stock_quantity = :3, expiry_date = :4 WHERE item_ID = :5`, 
+            [name, type, stock_quantity, expDate, item_ID], 
+            { autoCommit: true }
+        );
         
-        // 2. Reassign the Staff (Find the donation, then update management)
+        // 2. Update the Donation Management link
         const donItem = await connection.execute(`SELECT donation_ID FROM Donation_Item WHERE item_ID = :1`, [item_ID]);
+        
         if (donItem.rows.length > 0 && staff_ID) {
             const don_ID = donItem.rows[0].DONATION_ID;
+            const parsedStaffId = parseInt(staff_ID, 10); // Force the ID into a math integer
+            
             const mgmtCheck = await connection.execute(`SELECT management_ID FROM Donation_Management WHERE donation_ID = :1`, [don_ID]);
             
             if (mgmtCheck.rows.length > 0) {
-                await connection.execute(`UPDATE Donation_Management SET staff_ID = :1 WHERE donation_ID = :2`, [staff_ID, don_ID]);
+                await connection.execute(
+                    `UPDATE Donation_Management SET staff_ID = :1 WHERE donation_ID = :2`, 
+                    [parsedStaffId, don_ID], 
+                    { autoCommit: true }
+                );
             } else {
                 const mgmt_ID = Math.floor(Math.random() * 90000) + 10000;
-                await connection.execute(`INSERT INTO Donation_Management (management_ID, staff_ID, donation_ID) VALUES (:1, :2, :3)`, [mgmt_ID, staff_ID, don_ID]);
+                await connection.execute(
+                    `INSERT INTO Donation_Management (management_ID, staff_ID, donation_ID) VALUES (:1, :2, :3)`, 
+                    [mgmt_ID, parsedStaffId, don_ID], 
+                    { autoCommit: true }
+                );
             }
         }
         res.json({ message: "Item updated successfully!" });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-    finally { if (connection) await connection.close(); }
+    } catch (err) { 
+        res.status(500).json({ error: err.message }); 
+    } finally { 
+        if (connection) await connection.close(); 
+    }
 });
-
 
 
 // 2. ADD A NEW ITEM
@@ -227,18 +245,25 @@ app.post('/api/donations', async (req, res) => {
 
 
 // DELETE AN ITEM (DELETE)
+// 6. DELETE AN ITEM
 app.delete('/api/items/:id', async (req, res) => {
-    const { id } = req.params;
+    const id = parseInt(req.params.id, 10);
     let connection;
     try {
         connection = await db.getPool().getConnection();
-        await connection.execute(`DELETE FROM Item WHERE item_ID = :1`, [id]);
-        res.json({ message: "Item deleted successfully!" });
-    } catch (err) {
-        // Will throw an error if the item is linked to a Donation (Foreign Key constraint)
-        res.status(500).json({ error: "Cannot delete item. It may be linked to an existing donation." });
-    } finally {
-        if (connection) await connection.close();
+
+        // STEP 1: Delete the child link inside Donation_Item first
+        await connection.execute(`DELETE FROM Donation_Item WHERE item_ID = :1`, [id], { autoCommit: true });
+
+        // STEP 2: Now that it is untangled, delete the actual Item
+        await connection.execute(`DELETE FROM Item WHERE item_ID = :1`, [id], { autoCommit: true });
+
+        res.json({ success: true });
+    } catch (err) { 
+        console.error("Delete Error:", err.message);
+        res.status(500).json({ error: "Cannot delete item. " + err.message }); 
+    } finally { 
+        if (connection) await connection.close(); 
     }
 });
 
