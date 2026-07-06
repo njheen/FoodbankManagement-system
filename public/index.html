@@ -26,6 +26,10 @@
 
 <div class="container">
     <div class="header">
+
+        
+
+
         <div id="welcomeMessage">Welcome!</div>
         <button class="btn btn-logout" onclick="logout()">Logout</button>
     </div>
@@ -59,6 +63,25 @@
         </div>
 
     </div>
+
+
+    <!-- Welcome message will be dynamically inserted here for the recipient dashboard view -->
+        <div id="recipientInfoBoard" style="display: none; background: #e8f4f8; padding: 20px; border-radius: 8px; border-left: 6px solid #17a2b8; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <h3 style="margin-top: 0; color: #0c5460; font-size: 18px;">👋 Welcome to the Community Portal!</h3>
+            <p style="color: #333; line-height: 1.6; font-size: 15px;">
+                We are thrilled to have you here. Below you can browse all currently available items. If you see something you need, please visit our center during operating hours.
+            </p>
+            
+            <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #b8daff; margin-top: 15px;">
+                <h4 style="margin-top: 0; color: #0056b3; font-size: 15px;">📌 Important Announcements</h4>
+                <ul style="margin-bottom: 0; color: #444; line-height: 1.6;">
+                    <li><strong>Distribution Hours:</strong> Monday to Friday, 9:00 AM - 4:00 PM.</li>
+                    <li><strong>Special Notice:</strong> Fresh produce and bread arrive every Wednesday morning.</li>
+                    <li><strong>Location:</strong> Main Community Hall, Counter 3.</li>
+                    </ul>
+            </div>
+        </div>
+
 
         <!-- code for displaying search and filter options -->
     <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
@@ -203,6 +226,11 @@ let currentUser = null;
         if (currentUser.role === 'Staff') {
             document.querySelectorAll('.staff-only').forEach(el => el.style.display = 'table-cell'); 
             document.getElementById('adminPanel').style.display = 'block';
+        }
+
+        // Show the Welcome Info Board ONLY to Recipients
+        if (currentUser.role === 'Recipient') {
+            document.getElementById('recipientInfoBoard').style.display = 'block';
         }
         
         loadItems();
