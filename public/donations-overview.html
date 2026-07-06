@@ -5,12 +5,13 @@
     <title>Donation Management Overview</title>
     <style>
         body { font-family: Arial; margin: 40px; background: #f4f4f9; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
         th { background: #6f42c1; color: white; }
-        .status-select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; width: 100%;}
-        .btn-blue { background: #007bff; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;}
+        .status-select, .donor-select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; width: 100%;}
+        .status-select { font-weight: bold; }
+        .btn-blue { background: #007bff; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;}
         .btn-gray { background: #6c757d; color: white; text-decoration: none; display: inline-block; padding: 10px 15px; border-radius: 4px; margin-top:20px;}
     </style>
 </head>
@@ -18,19 +19,20 @@
 
 <div class="container">
     <h2>Donation Batch Assignments</h2>
-    <p>Manage the processing status of received donations and view donor origins.</p>
+    <p>Manage the processing status of received donations and assign donor origins.</p>
     <table>
         <thead>
             <tr>
-                <th>Donation ID</th>
+                <th>ID</th>
                 <th>Managing Staff</th>
                 <th>Total Items</th>
                 <th>Batch Status</th>
-                <th>Origin Data</th>
+                <th style="width: 250px;">Origin Donor</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody id="overviewTable">
-            <tr><td colspan="5">Loading...</td></tr>
+            <tr><td colspan="6">Loading...</td></tr>
         </tbody>
     </table>
     <a href="/index.html" class="btn-gray">Back to Dashboard</a>
@@ -43,11 +45,22 @@
     else {
         const user = JSON.parse(sessionStr);
         if (['Admin', 'Manager'].includes(user.user.ROLE)) {
-            loadOverview();
+            initPage();
         } else {
             alert("Only Managers and Admins can view the overview.");
             window.location.href = '/index.html';
         }
+    }
+
+    let globalDonors = [];
+
+    async function initPage() {
+        // Fetch all donors first to populate the dropdowns later
+        const donorRes = await fetch('/api/donors');
+        if (donorRes.ok) {
+            globalDonors = await donorRes.json();
+        }
+        loadOverview();
     }
 
     // Load the Table
@@ -59,15 +72,23 @@
         data.forEach(d => {
             const manager = d.MANAGER_NAME || 'Unassigned';
             const totalQty = d.TOTAL_QUANTITY || 0;
-            const donorId = d.DONOR_ID;
+            const donorId = d.DONOR_ID || 1;
             
-            // Generate color based on status
             let selectStyle = "color: black;";
-            if(d.STATUS === 'Pending') selectStyle = "color: #d39e00;"; // Yellowish
-            if(d.STATUS === 'Approve') selectStyle = "color: #17a2b8;"; // Teal
-            if(d.STATUS === 'Active') selectStyle = "color: #28a745;";  // Green
-            if(d.STATUS === 'Completed') selectStyle = "color: #0056b3;"; // Dark Blue
-            if(d.STATUS === 'Cancelled') selectStyle = "color: #dc3545;"; // Red
+            if(d.STATUS === 'Pending') selectStyle = "color: #d39e00;"; 
+            if(d.STATUS === 'Approve') selectStyle = "color: #17a2b8;"; 
+            if(d.STATUS === 'Active') selectStyle = "color: #28a745;";  
+            if(d.STATUS === 'Completed') selectStyle = "color: #0056b3;"; 
+            if(d.STATUS === 'Cancelled') selectStyle = "color: #dc3545;"; 
+
+            // Build the Donor Dropdown options
+            let donorOptions = `<option value="1">-- Unassigned / Anonymous --</option>`;
+            globalDonors.forEach(donor => {
+                if (donor.DONOR_ID !== 1) { // Skip generating a duplicate anonymous row
+                    const isSelected = (donor.DONOR_ID === donorId) ? 'selected' : '';
+                    donorOptions += `<option value="${donor.DONOR_ID}" ${isSelected}>${donor.NAME_DONOR}</option>`;
+                }
+            });
 
             html += `<tr>
                 <td><strong>${d.DONATION_ID}</strong></td>
@@ -85,30 +106,39 @@
                 </td>
                 
                 <td>
-                    <button class="btn-blue" onclick="window.location.href='/view-donor.html?id=${donorId}'">View Donor</button>
+                    <select class="donor-select" onchange="updateDonor(${d.DONATION_ID}, this.value)">
+                        ${donorOptions}
+                    </select>
+                </td>
+                
+                <td>
+                    <button class="btn-blue" onclick="window.location.href='/view-donor.html?id=${donorId}'">View Profile</button>
                 </td>
             </tr>`;
         });
-        document.getElementById('overviewTable').innerHTML = html || '<tr><td colspan="5">No donations found.</td></tr>';
+        document.getElementById('overviewTable').innerHTML = html || '<tr><td colspan="6">No donations found.</td></tr>';
     }
 
-    // Update Status Function
     async function updateStatus(donationId, newStatus) {
         try {
-            const res = await fetch(`/api/donations/${donationId}/status`, {
+            await fetch(`/api/donations/${donationId}/status`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
             });
-            if (res.ok) {
-                // Refresh table to apply new color styles immediately
-                loadOverview(); 
-            } else {
-                alert("Failed to update status. Check database constraints.");
-            }
-        } catch(err) {
-            console.error(err);
-        }
+            loadOverview(); 
+        } catch(err) { console.error(err); }
+    }
+
+    async function updateDonor(donationId, newDonorId) {
+        try {
+            await fetch(`/api/donations/${donationId}/donor`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ donor_ID: newDonorId })
+            });
+            loadOverview(); // Refresh so the "View Profile" button updates to the new user!
+        } catch(err) { console.error(err); alert("Failed to update donor."); }
     }
 </script>
 </body>

@@ -556,16 +556,31 @@ app.put('/api/donors/:id', async (req, res) => {
     finally { if (connection) await connection.close(); }
 });
 
-// DELETE DONOR
+// DELETE DONOR (And revert their donations to Unassigned/Anonymous)
 app.delete('/api/donors/:id', async (req, res) => {
     const id = parseInt(req.params.id, 10);
     let connection;
     try {
         connection = await db.getPool().getConnection();
-        await connection.execute(`DELETE FROM Donor WHERE donor_ID = :1`, [id]);
+        
+        // Protect the System Anonymous Donor (ID: 1) from ever being deleted!
+        if (id === 1) {
+            return res.status(400).json({ error: "Cannot delete the System Anonymous Donor." });
+        }
+
+        // STEP 1: Find all donations linked to this donor and set them to 1 (Anonymous)
+        await connection.execute(
+            `UPDATE Donation SET donor_ID = 1 WHERE donor_ID = :1`, 
+            [id], 
+            { autoCommit: true }
+        );
+
+        // STEP 2: Safely delete the actual donor
+        await connection.execute(`DELETE FROM Donor WHERE donor_ID = :1`, [id], { autoCommit: true });
+        
         res.json({ success: true });
     } catch (err) { 
-        res.status(500).json({ error: "Cannot delete donor. They are linked to existing donations." }); 
+        res.status(500).json({ error: "Cannot delete donor: " + err.message }); 
     }
     finally { if (connection) await connection.close(); }
 });
@@ -606,6 +621,27 @@ app.put('/api/donations/:id/status', async (req, res) => {
     finally { if (connection) await connection.close(); }
 });
 
+// UPDATE DONATION DONOR (Reassign or Unassign)
+app.put('/api/donations/:id/donor', async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const { donor_ID } = req.body;
+    let connection;
+    try {
+        connection = await db.getPool().getConnection();
+        
+        // If no donor is selected, default to 1 (Anonymous)
+        const finalDonorID = (donor_ID && donor_ID !== "") ? parseInt(donor_ID, 10) : 1; 
+
+        await connection.execute(
+            `UPDATE Donation SET donor_ID = :1 WHERE donation_ID = :2`, 
+            [finalDonorID, id], 
+            { autoCommit: true }
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+    finally { if (connection) await connection.close(); }
+});
+
 // 3. GET A SINGLE DONOR (For View Page)
 app.get('/api/donors/:id', async (req, res) => {
     const id = parseInt(req.params.id, 10);
@@ -618,6 +654,8 @@ app.get('/api/donors/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
     finally { if (connection) await connection.close(); }
 });
+
+
 
 
 
