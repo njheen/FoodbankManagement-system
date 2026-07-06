@@ -30,36 +30,33 @@
         <button class="btn btn-logout" onclick="logout()">Logout</button>
     </div>
     
-    <div id="adminPanel" class="staff-only" style="background: #e9ecef; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+    <div id="adminPanel" class="staff-only" style="background: #e9ecef; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
         
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 20px;">
-        
-        <div>
-            <button class="btn btn-green" onclick="window.location.href='/add-items.html'" style="padding: 10px 20px;">+ Add New Items</button>
+        <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 20px;">
             
+            <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="font-size: 12px; font-weight: bold; color: #777; text-transform: uppercase; margin-bottom: 5px;">Daily Operations</div>
+                
+                <button class="btn btn-green" style="text-align: left; padding: 10px;" onclick="window.location.href='/add-items.html'">📦 Add New Items</button>
+                <button class="btn" style="background-color: #28a745; color: white; text-align: left; padding: 10px;" onclick="window.location.href='/donors.html'">👥 Manage Donors</button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="font-size: 12px; font-weight: bold; color: #777; text-transform: uppercase; margin-bottom: 5px;">Management Tools</div>
+                
+                <button id="overviewBtn" class="btn" style="display: none; background-color: #6f42c1; color: white; text-align: left; padding: 10px;" onclick="window.location.href='/donations-overview.html'">📊 Donation Overview</button>
+                <button id="manageUsersBtn" class="btn btn-blue" style="display: none; text-align: left; padding: 10px;" onclick="window.location.href='/manage-users.html'">⚙️ Manage Users</button>
+                <button id="adminBtn" class="btn" style="display: none; background-color: #17a2b8; color: white; text-align: left; padding: 10px;" onclick="window.location.href='/register-staff.html'">➕ Register Staff</button>
+            </div>
+
         </div>
-        <button class="btn" style="background-color: #28a745; color: white; padding: 10px 20px;" onclick="window.location.href='/donors.html'">👥 Manage Donors</button>
 
-        <div style="display: flex; flex-direction: column; gap: 8px; min-width: 220px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <div style="font-size: 12px; font-weight: bold; color: #777; text-transform: uppercase; margin-bottom: 5px;">Management Tools</div>
-            
-            <button id="overviewBtn" class="btn" style="display: none; background-color: #6f42c1; color: white; text-align: left; padding: 10px;" onclick="window.location.href='/donations-overview.html'">📊 Donation Overview</button>
-            
-            <button id="manageUsersBtn" class="btn btn-blue" style="display: none; text-align: left; padding: 10px;" onclick="window.location.href='/manage-users.html'">⚙️ Manage Users</button>
-            
-            <button id="adminBtn" class="btn" style="display: none; background-color: #17a2b8; color: white; text-align: left; padding: 10px;" onclick="window.location.href='/register-staff.html'">➕ Register Staff</button>
-
-
+        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-top: 20px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+            <h3 style="margin-top: 0; color: #333; font-size: 16px; text-transform: uppercase;">Inventory Distribution by Type</h3>
+            <div style="width: 100%; max-width: 350px;">
+                <canvas id="inventoryChart"></canvas>
+            </div>
         </div>
-
-    </div>
-
-    <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-        <h3 style="margin-top: 0; color: #333; font-size: 16px; text-transform: uppercase;">Inventory Distribution by Type</h3>
-        <div style="width: 100%; max-width: 350px;">
-            <canvas id="inventoryChart"></canvas>
-        </div>
-    </div>
 
     </div>
 
