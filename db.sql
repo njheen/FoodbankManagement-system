@@ -69,14 +69,12 @@ CREATE TABLE Donation (
     total_quantity INT NOT NULL, 
     status VARCHAR2(50) DEFAULT 'Pending' NOT NULL, 
     donor_ID INT NOT NULL,
-    recipient_ID INT, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     -- Validation: Only allow specific text for status
     CONSTRAINT chk_status CHECK (status IN ('Pending', 'Processed', 'Distributed', 'Rejected')),
     
     FOREIGN KEY (donor_ID) REFERENCES Donor(donor_ID),
-    FOREIGN KEY (recipient_ID) REFERENCES Recipient(recipient_ID)
 );
 
 -- THE NEW JUNCTION TABLE (Solves the 1-to-1 Item flaw)
