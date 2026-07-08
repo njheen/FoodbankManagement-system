@@ -40,7 +40,7 @@
     
     <button class="btn btn-blue" onclick="addRow()">+ Add Another Row</button>
 
-    <div id="itemsContainer">
+        <div id="itemsContainer">
         </div>
 
     <div class="actions">
@@ -154,18 +154,9 @@
 
     // Run this when the page loads
     if (checkAuth()) {
-        addRow(); // Automatically create the very first empty row for the user
-    }
-
-    if (checkAuth()) {
-        loadStaffDropdown(); // Load intuitive dropdown
-        addRow(); 
-    }
-
-    if (checkAuth()) {
-        loadStaffDropdown(); 
-        loadDonorDropdown(); // Call the new function
-        addRow(); 
+        loadStaffDropdown();   // Load staff dropdown (ONCE)
+        loadDonorDropdown();   // Load donor dropdown (ONCE)
+        addRow();              // Create one empty row
     }
     
 </script>
