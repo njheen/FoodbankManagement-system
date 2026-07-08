@@ -77,23 +77,15 @@ app.get('/api/items/:id', async (req, res) => {
 
 // 3. ADD BATCH ITEMS, ASSIGN DONOR & MANAGER
 app.post('/api/items/batch', async (req, res) => {
-    const { items, staff_ID, donor_ID } = req.body; // <--- Now accepts donor_ID
+    const { items, staff_ID, donor_ID } = req.body;
     let connection;
     try {
         connection = await db.getPool().getConnection();
-        
-        // Use the selected donor, or fallback to 1 (System Anonymous)
         const finalDonorID = donor_ID || 1;
-        
-        const donorCheck = await connection.execute(`SELECT donor_ID FROM Donor WHERE donor_ID = :1`, [finalDonorID]);
-        if (donorCheck.rows.length === 0 && finalDonorID === 1) {
-            await connection.execute(`INSERT INTO Donor (donor_ID, name_donor) VALUES (1, 'System Anonymous Donor')`);
-        }
-
+        // ensure donor exists...
         let total_quantity = 0;
         for (let item of items) total_quantity += parseInt(item.stock_quantity, 10) || 0;
         
-        // Link the specific Donor ID to the donation
         const donation_ID = Math.floor(Math.random() * 90000) + 10000;
         await connection.execute(
             `INSERT INTO Donation (donation_ID, donor_ID, status, total_quantity) VALUES (:1, :2, 'Pending', :3)`, 
@@ -109,15 +101,24 @@ app.post('/api/items/batch', async (req, res) => {
             const item_ID = Math.floor(Math.random() * 90000) + 10000;
             const expDate = item.expiry_date ? new Date(item.expiry_date) : null;
             
-            await connection.execute(`INSERT INTO Item (item_ID, name, type, stock_quantity, expiry_date) VALUES (:1, :2, :3, :4, :5)`, [item_ID, item.name, item.type, item.stock_quantity, expDate]);
+            // ✅ FIX: Insert with stock_quantity = 0
+            await connection.execute(
+                `INSERT INTO Item (item_ID, name, type, stock_quantity, expiry_date) VALUES (:1, :2, :3, 0, :4)`,
+                [item_ID, item.name, item.type, expDate]
+            );
             
             const donItemID = Math.floor(Math.random() * 90000) + 10000;
-            await connection.execute(`INSERT INTO Donation_Item (donation_item_ID, donation_ID, item_ID, item_quantity) VALUES (:1, :2, :3, :4)`, [donItemID, donation_ID, item_ID, item.stock_quantity]);
+            await connection.execute(
+                `INSERT INTO Donation_Item (donation_item_ID, donation_ID, item_ID, item_quantity) VALUES (:1, :2, :3, :4)`,
+                [donItemID, donation_ID, item_ID, item.stock_quantity]
+            );
+            // The trigger will now add item.stock_quantity to the item's stock (0 + qty = qty)
         }
         res.json({ success: true, message: "Donation added successfully!" });
     } catch (err) { res.status(500).json({ error: err.message }); }
     finally { if (connection) await connection.close(); }
 });
+
 
 // 4. UPDATE ITEM & REASSIGN STAFF
 // 4. UPDATE ITEM & REASSIGN / UNASSIGN STAFF & UPDATE DONATION TOTAL
