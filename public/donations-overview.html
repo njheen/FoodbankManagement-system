@@ -5,7 +5,7 @@
     <title>Donation Management Overview</title>
     <style>
         body { font-family: Arial; margin: 40px; background: #f4f4f9; }
-        .container { max-width: 1100px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
         th { background: #6f42c1; color: white; }
@@ -13,16 +13,107 @@
         .status-select { font-weight: bold; }
         .btn-blue { background: #007bff; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;}
         .btn-gray { background: #6c757d; color: white; text-decoration: none; display: inline-block; padding: 10px 15px; border-radius: 4px; margin-top:20px;}
+
+        /* Filter row */
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            align-items: flex-end;
+        }
+        .filter-row .filter-group {
+            flex: 1 1 180px;
+            min-width: 150px;
+        }
+        .filter-row label {
+            display: block;
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 3px;
+        }
+        .filter-row select, .filter-row input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .filter-row .btn-clear {
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-weight: bold;
+            height: 38px;
+            align-self: flex-end;
+        }
+        .filter-row .btn-refresh {
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-weight: bold;
+            height: 38px;
+            align-self: flex-end;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Donation Batch Assignments</h2>
-        <button class="btn btn-blue" id="refreshBtn" onclick="refreshOverview()" style="padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
-        🔄 Refresh
-    </button>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2 style="margin: 0;">Donation Batch Assignments</h2>
+        <button class="btn-refresh" onclick="refreshOverview()">🔄 Refresh</button>
+    </div>
     <p>Manage the processing status of received donations and assign donor origins.</p>
+
+    <!-- ====== FILTER ROW ====== -->
+    <div class="filter-row">
+        <div class="filter-group">
+            <label>Managing Staff</label>
+            <select id="filterStaff" onchange="applyDonationFilters()">
+                <option value="">All Staff</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Status</label>
+            <select id="filterStatus" onchange="applyDonationFilters()">
+                <option value="">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Approve">Approve</option>
+                <option value="Active">Active</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Donor</label>
+            <select id="filterDonor" onchange="applyDonationFilters()">
+                <option value="">All Donors</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Sort by Total Items</label>
+            <select id="sortTotal" onchange="applyDonationFilters()">
+                <option value="">None</option>
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+            </select>
+        </div>
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <button class="btn-clear" onclick="clearDonationFilters()">Clear Filters</button>
+        </div>
+    </div>
+
     <table>
         <thead>
             <tr>
@@ -56,21 +147,93 @@
     }
 
     let globalDonors = [];
+    let globalStaff = [];
+    let allDonations = []; // store raw data for filtering
 
     async function initPage() {
-        // Fetch all donors first to populate the dropdowns later
+        // Fetch donors and staff for dropdowns
         const donorRes = await fetch('/api/donors');
         if (donorRes.ok) {
             globalDonors = await donorRes.json();
+            populateDonorDropdown();
+        }
+        const staffRes = await fetch('/api/staff/list');
+        if (staffRes.ok) {
+            globalStaff = await staffRes.json();
+            populateStaffDropdown();
         }
         loadOverview();
     }
 
-    // Load the Table
+    function populateDonorDropdown() {
+        const select = document.getElementById('filterDonor');
+        globalDonors.forEach(d => {
+            if (d.DONOR_ID !== 1) { // skip anonymous, but we'll keep it as option "All"
+                const opt = document.createElement('option');
+                opt.value = d.DONOR_ID;
+                opt.textContent = d.NAME_DONOR;
+                select.appendChild(opt);
+            }
+        });
+        // Also add anonymous as a specific filter option?
+        // Already have "All Donors", and we can add "Anonymous" for donor_id=1
+        // We'll add it explicitly
+        const optAnonymous = document.createElement('option');
+        optAnonymous.value = '1';
+        optAnonymous.textContent = 'Anonymous / Unknown';
+        select.appendChild(optAnonymous);
+    }
+
+    function populateStaffDropdown() {
+        const select = document.getElementById('filterStaff');
+        globalStaff.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.STAFF_ID;
+            opt.textContent = `${s.NAME_STAFF} (${s.ROLE})`;
+            select.appendChild(opt);
+        });
+    }
+
+    // Load the Table with filters
     async function loadOverview() {
         const res = await fetch('/api/donations');
-        const data = await res.json();
-        
+        allDonations = await res.json();
+        applyDonationFilters();
+    }
+
+    function applyDonationFilters() {
+        let data = allDonations.slice();
+
+        // Filter by staff
+        const staffFilter = document.getElementById('filterStaff').value;
+        if (staffFilter) {
+            data = data.filter(d => d.STAFF_ID === parseInt(staffFilter, 10));
+        }
+
+        // Filter by status
+        const statusFilter = document.getElementById('filterStatus').value;
+        if (statusFilter) {
+            data = data.filter(d => d.STATUS === statusFilter);
+        }
+
+        // Filter by donor
+        const donorFilter = document.getElementById('filterDonor').value;
+        if (donorFilter) {
+            data = data.filter(d => d.DONOR_ID === parseInt(donorFilter, 10));
+        }
+
+        // Sort by total items
+        const sortTotal = document.getElementById('sortTotal').value;
+        if (sortTotal === 'asc') {
+            data.sort((a, b) => (a.TOTAL_QUANTITY || 0) - (b.TOTAL_QUANTITY || 0));
+        } else if (sortTotal === 'desc') {
+            data.sort((a, b) => (b.TOTAL_QUANTITY || 0) - (a.TOTAL_QUANTITY || 0));
+        }
+
+        renderDonationTable(data);
+    }
+
+    function renderDonationTable(data) {
         let html = '';
         data.forEach(d => {
             const manager = d.MANAGER_NAME || 'Unassigned';
@@ -84,10 +247,10 @@
             if(d.STATUS === 'Completed') selectStyle = "color: #0056b3;"; 
             if(d.STATUS === 'Cancelled') selectStyle = "color: #dc3545;"; 
 
-            // Build the Donor Dropdown options
+            // Build donor dropdown options (for inline edit)
             let donorOptions = `<option value="1">-- Unassigned / Anonymous --</option>`;
             globalDonors.forEach(donor => {
-                if (donor.DONOR_ID !== 1) { // Skip generating a duplicate anonymous row
+                if (donor.DONOR_ID !== 1) {
                     const isSelected = (donor.DONOR_ID === donorId) ? 'selected' : '';
                     donorOptions += `<option value="${donor.DONOR_ID}" ${isSelected}>${donor.NAME_DONOR}</option>`;
                 }
@@ -97,7 +260,6 @@
                 <td><strong>${d.DONATION_ID}</strong></td>
                 <td>${manager}</td>
                 <td>${totalQty} units</td>
-                
                 <td>
                     <select class="status-select" style="${selectStyle}" onchange="updateStatus(${d.DONATION_ID}, this.value)">
                         <option value="Pending" ${d.STATUS === 'Pending' ? 'selected' : ''}>Pending</option>
@@ -107,13 +269,11 @@
                         <option value="Cancelled" ${d.STATUS === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
                     </select>
                 </td>
-                
                 <td>
                     <select class="donor-select" onchange="updateDonor(${d.DONATION_ID}, this.value)">
                         ${donorOptions}
                     </select>
                 </td>
-                
                 <td>
                     <button class="btn-blue" onclick="window.location.href='/view-donor.html?id=${donorId}'">View Profile</button>
                 </td>
@@ -122,16 +282,24 @@
         document.getElementById('overviewTable').innerHTML = html || '<tr><td colspan="6">No donations found.</td></tr>';
     }
 
-            function refreshOverview() {
-            const btn = document.getElementById('refreshBtn');
-            btn.textContent = '⏳ Refreshing...';
-            btn.disabled = true;
-            loadOverview().then(() => {
-                btn.textContent = '🔄 Refresh';
-                btn.disabled = false;
-            });
-        }
-        
+    function clearDonationFilters() {
+        document.getElementById('filterStaff').value = '';
+        document.getElementById('filterStatus').value = '';
+        document.getElementById('filterDonor').value = '';
+        document.getElementById('sortTotal').value = '';
+        applyDonationFilters();
+    }
+
+    function refreshOverview() {
+        const btn = document.querySelector('.btn-refresh');
+        btn.textContent = '⏳ Refreshing...';
+        btn.disabled = true;
+        loadOverview().then(() => {
+            btn.textContent = '🔄 Refresh';
+            btn.disabled = false;
+        });
+    }
+
     async function updateStatus(donationId, newStatus) {
         try {
             await fetch(`/api/donations/${donationId}/status`, {
@@ -150,28 +318,10 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ donor_ID: newDonorId })
             });
-            loadOverview(); // Refresh so the "View Profile" button updates to the new user!
+            loadOverview();
         } catch(err) { console.error(err); alert("Failed to update donor."); }
     }
-
-
-
-    // Add this to donations-overview.html after the existing script
-    // Auto-refresh every 30 seconds
-    setInterval(() => {
-        loadOverview();
-    }, 30000);
-
-    // Add a manual refresh button
-    function refreshOverview() {
-        loadOverview();
-        // Show a quick visual feedback
-        const btn = document.querySelector('#refreshBtn');
-        if (btn) {
-            btn.innerText = '🔄 Refreshing...';
-            setTimeout(() => { btn.innerText = '🔄 Refresh'; }, 1000);
-        }
-    }
 </script>
+
 </body>
 </html>

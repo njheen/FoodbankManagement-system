@@ -14,7 +14,7 @@
         th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
         th { background: #f8f9fa; }
         .form-group { margin-bottom: 15px; }
-        input, button { padding: 8px; box-sizing: border-box; }
+        input, select, button { padding: 8px; box-sizing: border-box; }
         .btn { border: none; cursor: pointer; font-weight: bold; border-radius: 4px; padding: 8px 12px;}
         .btn-green { background: #28a745; color: white; width: 100%; }
         .btn-red { background: #dc3545; color: white; }
@@ -62,6 +62,47 @@
         .stat-card.expiry .stat-number { color: #dc3545; }
         .stat-card.items .stat-number { color: #28a745; }
         .stat-card.recipients .stat-number { color: #17a2b8; }
+
+        /* Filter row styling */
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            align-items: flex-end;
+        }
+        .filter-row .filter-group {
+            flex: 1 1 180px;
+            min-width: 150px;
+        }
+        .filter-row label {
+            display: block;
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 3px;
+        }
+        .filter-row input, .filter-row select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .filter-row .btn-clear {
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-weight: bold;
+            height: 38px;
+            align-self: flex-end;
+        }
     </style>
 </head>
 <body>
@@ -74,7 +115,7 @@
     
     <div id="adminPanel" class="staff-only" style="background: #e9ecef; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
         
-        <!-- ===== STATISTICS DASHBOARD ===== -->
+        <!-- Statistics Cards -->
         <div class="stats-grid" id="statsGrid">
             <div class="stat-card items">
                 <div class="stat-icon">📦</div>
@@ -97,7 +138,6 @@
                 <div class="stat-number" id="pendingDonations">0</div>
             </div>
         </div>
-        <!-- ===== END STATISTICS ===== -->
         
         <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 20px;">
             
@@ -128,7 +168,7 @@
     </div>
 
 
-    <!-- Welcome message will be dynamically inserted here for the recipient dashboard view -->
+    <!-- Recipient welcome board -->
     <div id="recipientInfoBoard" style="display: none; background: #e8f4f8; padding: 20px; border-radius: 8px; border-left: 6px solid #17a2b8; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
         <h3 style="margin-top: 0; color: #0c5460; font-size: 18px;">👋 Welcome to the Community Portal!</h3>
         <p style="color: #333; line-height: 1.6; font-size: 15px;">
@@ -146,22 +186,54 @@
     </div>
 
 
-    <!-- Search and filter options -->
-    <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 150px;">
-            <label style="font-size: 12px; font-weight: bold; color: #555;">Search by Name</label>
-            <input type="text" id="searchName" placeholder="e.g., Canned Beans" oninput="applyFilters()" style="width:100%; padding: 8px; border:1px solid #ddd; border-radius:4px;">
+    <!-- ====== UPDATED FILTER ROW ====== -->
+    <div class="filter-row">
+        <!-- Existing filters -->
+        <div class="filter-group">
+            <label>Search by Name</label>
+            <input type="text" id="searchName" placeholder="e.g., Canned Beans" oninput="applyFilters()">
         </div>
-        <div style="flex: 1; min-width: 150px;">
-            <label style="font-size: 12px; font-weight: bold; color: #555;">Filter by Type</label>
-            <input type="text" id="searchType" placeholder="e.g., Food" oninput="applyFilters()" style="width:100%; padding: 8px; border:1px solid #ddd; border-radius:4px;">
+        <div class="filter-group">
+            <label>Filter by Type</label>
+            <input type="text" id="searchType" placeholder="e.g., Food" oninput="applyFilters()">
         </div>
-        <div style="flex: 1; min-width: 150px;">
-            <label style="font-size: 12px; font-weight: bold; color: #555;">Filter by Expiry Date</label>
-            <input type="date" id="searchExpiry" onchange="applyFilters()" style="width:100%; padding: 8px; border:1px solid #ddd; border-radius:4px;">
+        <div class="filter-group">
+            <label>Filter by Expiry Date</label>
+            <input type="date" id="searchExpiry" onchange="applyFilters()">
         </div>
-        <div style="margin-top: 15px;">
-            <button class="btn btn-gray" onclick="clearFilters()" style="background: #6c757d; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer;">Clear</button>
+
+        <!-- NEW: Staff filter -->
+        <div class="filter-group">
+            <label>Managing Staff</label>
+            <select id="filterStaff" onchange="applyFilters()">
+                <option value="">All Staff</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Staff ID</label>
+            <input type="text" id="filterStaffId" placeholder="e.g., 101" oninput="applyFilters()">
+        </div>
+
+        <!-- NEW: Sorting controls -->
+        <div class="filter-group">
+            <label>Sort by Quantity</label>
+            <select id="sortQty" onchange="applyFilters()">
+                <option value="">None</option>
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Sort by Expiry Date</label>
+            <select id="sortExpiry" onchange="applyFilters()">
+                <option value="">None</option>
+                <option value="asc">Ascending (soonest first)</option>
+                <option value="desc">Descending (latest first)</option>
+            </select>
+        </div>
+
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <button class="btn-clear" onclick="clearFilters()">Clear All</button>
         </div>
     </div>
 
@@ -188,6 +260,7 @@
 let currentUser = null;
 let currentInventory = [];
 let inventoryChartInstance = null;
+let staffList = []; // for filter dropdown
 
 // ==========================================
 // STATISTICS FUNCTIONS
@@ -195,12 +268,10 @@ let inventoryChartInstance = null;
 
 async function loadStatistics() {
     try {
-        // 1. Get items to calculate total and near expiry
         const itemsRes = await fetch('/api/items');
         const items = await itemsRes.json();
         currentInventory = items;
         
-        // Calculate total items
         let totalQty = 0;
         let nearExpiry = 0;
         const today = new Date();
@@ -210,8 +281,6 @@ async function loadStatistics() {
         items.forEach(item => {
             const qty = parseInt(item.STOCK_QUANTITY) || 0;
             totalQty += qty;
-            
-            // Check if item has expiry date and is within 7 days
             if (item.EXPIRY_DATE) {
                 const expiryDate = new Date(item.EXPIRY_DATE);
                 if (expiryDate >= today && expiryDate <= sevenDaysFromNow) {
@@ -223,18 +292,15 @@ async function loadStatistics() {
         document.getElementById('totalItems').textContent = totalQty;
         document.getElementById('nearExpiry').textContent = nearExpiry;
         
-        // 2. Get total recipients
         const recipientsRes = await fetch('/api/admin/recipients');
         const recipients = await recipientsRes.json();
         document.getElementById('totalRecipients').textContent = recipients.length || 0;
         
-        // 3. Get pending donations
         const donationsRes = await fetch('/api/donations');
         const donations = await donationsRes.json();
         const pending = donations.filter(d => d.STATUS === 'Pending');
         document.getElementById('pendingDonations').textContent = pending.length || 0;
         
-        // 4. Update chart with current data
         renderChart(items);
         
     } catch (error) {
@@ -243,7 +309,7 @@ async function loadStatistics() {
 }
 
 // ==========================================
-// CHART FUNCTION
+// CHART
 // ==========================================
 
 function renderChart(data) {
@@ -294,6 +360,27 @@ function renderChart(data) {
 }
 
 // ==========================================
+// LOAD STAFF FOR FILTER DROPDOWN
+// ==========================================
+
+async function loadStaffFilter() {
+    try {
+        const res = await fetch('/api/staff/list');
+        staffList = await res.json();
+        const select = document.getElementById('filterStaff');
+        // Keep "All Staff" option
+        staffList.forEach(s => {
+            const option = document.createElement('option');
+            option.value = s.STAFF_ID;
+            option.textContent = `${s.NAME_STAFF} (${s.ROLE})`;
+            select.appendChild(option);
+        });
+    } catch (err) {
+        console.error("Failed to load staff filter:", err);
+    }
+}
+
+// ==========================================
 // AUTHENTICATION
 // ==========================================
 
@@ -328,7 +415,8 @@ function checkAuth() {
         document.querySelectorAll('.staff-only').forEach(el => el.style.display = 'table-cell');
         document.getElementById('adminPanel').style.display = 'block';
         loadStatistics();
-        loadItems(); // ✅ CRITICAL FIX: Load inventory for staff too
+        loadStaffFilter(); // populate staff dropdown
+        loadItems();
     }
 
     if (currentUser.role === 'Recipient') {
@@ -347,39 +435,161 @@ function logout() {
 }
 
 // ==========================================
-// INVENTORY FUNCTIONS
+// INVENTORY FUNCTIONS with NEW Filters & Sorts
 // ==========================================
 
 async function loadItems() {
     try {
         const res = await fetch('/api/items');
         currentInventory = await res.json();
-        applyFilters();
-        renderChart(currentInventory);
+        applyFilters(); // apply all filters and render
     } catch (error) {
         console.error("Error loading items:", error);
     }
 }
 
 function applyFilters() {
-    const nameQuery = document.getElementById('searchName').value.toLowerCase();
-    const typeQuery = document.getElementById('searchType').value.toLowerCase();
+    // 1. Get raw data
+    let data = currentInventory.slice();
+
+    // 2. Text filters
+    const nameQuery = document.getElementById('searchName').value.toLowerCase().trim();
+    const typeQuery = document.getElementById('searchType').value.toLowerCase().trim();
     const expiryQuery = document.getElementById('searchExpiry').value;
 
-    const filteredData = currentInventory.filter(item => {
-        const matchName = item.NAME ? item.NAME.toLowerCase().includes(nameQuery) : false;
-        const matchType = item.TYPE ? item.TYPE.toLowerCase().includes(typeQuery) : false;
-        
-        let matchExpiry = true;
+    // 3. Staff filters
+    const staffIdFilter = document.getElementById('filterStaff').value;
+    const staffIdSearch = document.getElementById('filterStaffId').value.trim();
+
+    // 4. Apply filters
+    data = data.filter(item => {
+        // Name
+        if (nameQuery && !(item.NAME || '').toLowerCase().includes(nameQuery)) return false;
+        // Type
+        if (typeQuery && !(item.TYPE || '').toLowerCase().includes(typeQuery)) return false;
+        // Expiry date exact match
         if (expiryQuery) {
             const itemDate = item.EXPIRY_DATE ? new Date(item.EXPIRY_DATE).toISOString().split('T')[0] : '';
-            matchExpiry = (itemDate === expiryQuery);
+            if (itemDate !== expiryQuery) return false;
         }
-
-        return matchName && matchType && matchExpiry;
+        // Staff ID dropdown
+        if (staffIdFilter) {
+            const staffIdNum = parseInt(staffIdFilter, 10);
+            if (item.STAFF_ID !== staffIdNum) return false;
+        }
+        // Staff ID search (text input, matches staff_ID exactly or manager_name contains)
+        if (staffIdSearch) {
+            const searchNum = parseInt(staffIdSearch, 10);
+            // If search is numeric, match staff_ID, else match manager_name
+            if (!isNaN(searchNum)) {
+                if (item.STAFF_ID !== searchNum) return false;
+            } else {
+                // treat as text search on manager_name
+                if (!(item.MANAGER_NAME || '').toLowerCase().includes(staffIdSearch.toLowerCase())) return false;
+            }
+        }
+        return true;
     });
 
-    renderTable(filteredData);
+    // 5. Sorting
+    const sortQty = document.getElementById('sortQty').value;
+    const sortExpiry = document.getElementById('sortExpiry').value;
+
+    // Sort by quantity
+    if (sortQty === 'asc') {
+        data.sort((a, b) => (parseInt(a.STOCK_QUANTITY) || 0) - (parseInt(b.STOCK_QUANTITY) || 0));
+    } else if (sortQty === 'desc') {
+        data.sort((a, b) => (parseInt(b.STOCK_QUANTITY) || 0) - (parseInt(a.STOCK_QUANTITY) || 0));
+    }
+
+    // Sort by expiry date (secondary sort if quantity sort not active, or combined)
+    // We'll apply expiry sort either as primary if quantity sort is 'none', or as secondary.
+    if (sortExpiry !== '') {
+        // If quantity sort is active, we do a stable sort: first by expiry, then by quantity
+        // But to combine, we can sort by expiry first, then by quantity? Actually we want to allow both.
+        // We'll implement: if both selected, sort by expiry first then quantity.
+        // But to keep it simple, we'll allow separate: if expiry sort is selected, we sort by expiry primarily.
+        // However, we'll let the user choose one or the other, or both.
+        // Let's do: if expiry sort is selected, sort by expiry, and then apply quantity sort if selected.
+        // But we already applied quantity sort above, so we need to re-sort with expiry as primary?
+        // Better: apply expiry sort first, then quantity sort (so quantity sort overrides).
+        // We'll re-sort: first by expiry, then by quantity.
+        // But that might conflict. We'll implement: if both are selected, we sort by expiry first, then by quantity.
+        // So we'll combine both.
+        // Actually, let's sort by expiry first, then by quantity (if quantity sort is selected).
+        // We'll apply expiry sort, then quantity sort on top.
+        // But we already applied quantity sort. We'll redo.
+
+        // Let's redo sorting from scratch: apply expiry sort first, then quantity sort.
+        // We'll define a custom sort function.
+        data.sort((a, b) => {
+            // First compare expiry
+            const aExp = a.EXPIRY_DATE ? new Date(a.EXPIRY_DATE).getTime() : Infinity;
+            const bExp = b.EXPIRY_DATE ? new Date(b.EXPIRY_DATE).getTime() : Infinity;
+            let cmp = 0;
+            if (sortExpiry === 'asc') {
+                cmp = (aExp - bExp);
+            } else if (sortExpiry === 'desc') {
+                cmp = (bExp - aExp);
+            }
+            if (cmp !== 0) return cmp;
+            // If expiry equal or both null, then sort by quantity if selected
+            if (sortQty === 'asc') {
+                return (parseInt(a.STOCK_QUANTITY) || 0) - (parseInt(b.STOCK_QUANTITY) || 0);
+            } else if (sortQty === 'desc') {
+                return (parseInt(b.STOCK_QUANTITY) || 0) - (parseInt(a.STOCK_QUANTITY) || 0);
+            }
+            return 0;
+        });
+    } else {
+        // Only quantity sort is active (already done above), but if we did quantity sort and no expiry, it's fine.
+        // However, our earlier quantity sort might be overridden by the expiry sort block, so we need to handle the case where only quantity sort is active.
+        // To simplify, we'll do all sorting in one place.
+        // Let's rewrite sorting:
+        // We'll apply sorting based on both dropdowns.
+        // We'll use a single sort function that considers both.
+        // Actually, the above block handles expiry first, then quantity. If expiry is not selected, it uses only quantity sort.
+        // So we can remove the earlier separate quantity sort and rely on this combined block.
+        // So we'll move the quantity sort into the combined block.
+        // Let's refactor:
+    }
+
+    // To avoid duplication, we'll redo the sort block:
+    data.sort((a, b) => {
+        // 1. Expiry sort
+        if (sortExpiry !== '') {
+            const aExp = a.EXPIRY_DATE ? new Date(a.EXPIRY_DATE).getTime() : Infinity;
+            const bExp = b.EXPIRY_DATE ? new Date(b.EXPIRY_DATE).getTime() : Infinity;
+            let cmp = 0;
+            if (sortExpiry === 'asc') {
+                cmp = aExp - bExp;
+            } else if (sortExpiry === 'desc') {
+                cmp = bExp - aExp;
+            }
+            if (cmp !== 0) return cmp;
+        }
+        // 2. Quantity sort (if expiry equal or not sorting by expiry)
+        if (sortQty === 'asc') {
+            return (parseInt(a.STOCK_QUANTITY) || 0) - (parseInt(b.STOCK_QUANTITY) || 0);
+        } else if (sortQty === 'desc') {
+            return (parseInt(b.STOCK_QUANTITY) || 0) - (parseInt(a.STOCK_QUANTITY) || 0);
+        }
+        return 0;
+    });
+
+    // 6. Render
+    renderTable(data);
+}
+
+function clearFilters() {
+    document.getElementById('searchName').value = '';
+    document.getElementById('searchType').value = '';
+    document.getElementById('searchExpiry').value = '';
+    document.getElementById('filterStaff').value = '';
+    document.getElementById('filterStaffId').value = '';
+    document.getElementById('sortQty').value = '';
+    document.getElementById('sortExpiry').value = '';
+    applyFilters();
 }
 
 function renderTable(dataToRender) {
@@ -424,13 +634,6 @@ function renderTable(dataToRender) {
     });
 }
 
-function clearFilters() {
-    document.getElementById('searchName').value = '';
-    document.getElementById('searchType').value = '';
-    document.getElementById('searchExpiry').value = '';
-    applyFilters();
-}
-
 function editItem(id) {
     window.location.href = `/edit.html?id=${id}`;
 }
@@ -440,7 +643,7 @@ async function deleteItem(id) {
         const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
         if (res.ok) {
             loadItems();
-            loadStatistics(); // Refresh stats after deletion
+            loadStatistics();
         } else {
             const err = await res.json();
             alert(err.error);
