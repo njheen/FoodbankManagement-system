@@ -74,7 +74,7 @@ CREATE TABLE Donation (
     -- Validation: Only allow specific text for status
     CONSTRAINT chk_status CHECK (status IN ('Pending', 'Processed', 'Distributed', 'Rejected')),
     
-    FOREIGN KEY (donor_ID) REFERENCES Donor(donor_ID),
+    FOREIGN KEY (donor_ID) REFERENCES Donor(donor_ID)
 );
 
 -- THE NEW JUNCTION TABLE (Solves the 1-to-1 Item flaw)

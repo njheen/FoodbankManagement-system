@@ -19,6 +19,9 @@
 
 <div class="container">
     <h2>Donation Batch Assignments</h2>
+        <button class="btn btn-blue" id="refreshBtn" onclick="refreshOverview()" style="padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        🔄 Refresh
+    </button>
     <p>Manage the processing status of received donations and assign donor origins.</p>
     <table>
         <thead>
@@ -119,6 +122,16 @@
         document.getElementById('overviewTable').innerHTML = html || '<tr><td colspan="6">No donations found.</td></tr>';
     }
 
+            function refreshOverview() {
+            const btn = document.getElementById('refreshBtn');
+            btn.textContent = '⏳ Refreshing...';
+            btn.disabled = true;
+            loadOverview().then(() => {
+                btn.textContent = '🔄 Refresh';
+                btn.disabled = false;
+            });
+        }
+        
     async function updateStatus(donationId, newStatus) {
         try {
             await fetch(`/api/donations/${donationId}/status`, {
@@ -139,6 +152,25 @@
             });
             loadOverview(); // Refresh so the "View Profile" button updates to the new user!
         } catch(err) { console.error(err); alert("Failed to update donor."); }
+    }
+
+
+
+    // Add this to donations-overview.html after the existing script
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+        loadOverview();
+    }, 30000);
+
+    // Add a manual refresh button
+    function refreshOverview() {
+        loadOverview();
+        // Show a quick visual feedback
+        const btn = document.querySelector('#refreshBtn');
+        if (btn) {
+            btn.innerText = '🔄 Refreshing...';
+            setTimeout(() => { btn.innerText = '🔄 Refresh'; }, 1000);
+        }
     }
 </script>
 </body>

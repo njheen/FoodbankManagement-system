@@ -157,6 +157,56 @@
         }
     }
 
+    // Add this after the existing script, add quantity change feedback
+async function saveItem() {
+    const newName = document.getElementById('editName').value;
+    const newType = document.getElementById('editType').value;
+    const newQty = document.getElementById('editQty').value;
+    const newExpiry = document.getElementById('editExpiry').value;
+
+    // Basic validation
+    if (!newName || !newType || !newQty) {
+        alert("Please fill out all fields.");
+        return;
+    }
+
+    // Show loading state
+    const saveBtn = document.querySelector('.btn-green');
+    const originalText = saveBtn.innerText;
+    saveBtn.innerText = 'Saving...';
+    saveBtn.disabled = true;
+
+    try {
+        const res = await fetch(`/api/items/${itemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                name: newName, 
+                type: newType, 
+                stock_quantity: newQty,
+                expiry_date: newExpiry,
+                staff_ID: document.getElementById('editStaff').value 
+            })
+        });
+
+        if (res.ok) {
+            // Show success message before redirect
+            alert('✅ Item updated successfully! The donation total has been recalculated.');
+            window.location.href = '/index.html';
+        } else {
+            const data = await res.json();
+            alert('❌ Error: ' + (data.error || 'Failed to update item'));
+            saveBtn.innerText = originalText;
+            saveBtn.disabled = false;
+        }
+    } catch (error) {
+        console.error("Error saving item:", error);
+        alert('❌ Network error occurred.');
+        saveBtn.innerText = originalText;
+        saveBtn.disabled = false;
+    }
+}
+
     // Initialize Page
     if (checkAuth()) {
         loadItemData();

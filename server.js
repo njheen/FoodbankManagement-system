@@ -120,7 +120,7 @@ app.post('/api/items/batch', async (req, res) => {
 });
 
 // 4. UPDATE ITEM & REASSIGN STAFF
-// 4. UPDATE ITEM & REASSIGN / UNASSIGN STAFF
+// 4. UPDATE ITEM & REASSIGN / UNASSIGN STAFF & UPDATE DONATION TOTAL
 app.put('/api/items/:id', async (req, res) => {
     const item_ID = parseInt(req.params.id, 10);
     const { name, type, stock_quantity, expiry_date, staff_ID } = req.body;
@@ -129,51 +129,74 @@ app.put('/api/items/:id', async (req, res) => {
         connection = await db.getPool().getConnection();
         const expDate = expiry_date ? new Date(expiry_date) : null;
         
-        // 1. Update the Item details
+        // --- STEP 1: Update the Item details ---
         await connection.execute(
             `UPDATE Item SET name = :1, type = :2, stock_quantity = :3, expiry_date = :4 WHERE item_ID = :5`, 
-            [name, type, stock_quantity, expDate, item_ID], 
-            { autoCommit: true }
+            [name, type, stock_quantity, expDate, item_ID]
         );
         
-        // 2. Manage the Donation Assignment link
-        const donItem = await connection.execute(`SELECT donation_ID FROM Donation_Item WHERE item_ID = :1`, [item_ID]);
+        // --- STEP 2: Find the donation this item belongs to ---
+        const donItem = await connection.execute(
+            `SELECT donation_ID, item_quantity FROM Donation_Item WHERE item_ID = :1`, 
+            [item_ID]
+        );
         
         if (donItem.rows.length > 0) {
             const don_ID = donItem.rows[0].DONATION_ID;
+            const oldQuantity = donItem.rows[0].ITEM_QUANTITY;
+            const newQuantity = parseInt(stock_quantity, 10);
             
-            // Check if the user selected a specific staff member, OR selected "-- Unassigned --"
+            // --- STEP 3: Update the item quantity in Donation_Item ---
+            await connection.execute(
+                `UPDATE Donation_Item SET item_quantity = :1 WHERE item_ID = :2 AND donation_ID = :3`,
+                [newQuantity, item_ID, don_ID]
+            );
+            
+            // --- STEP 4: Recalculate total quantity for this donation ---
+            const totalResult = await connection.execute(
+                `SELECT SUM(item_quantity) as total FROM Donation_Item WHERE donation_ID = :1`,
+                [don_ID]
+            );
+            
+            const newTotal = totalResult.rows[0].TOTAL || 0;
+            
+            // --- STEP 5: Update the donation's total_quantity ---
+            await connection.execute(
+                `UPDATE Donation SET total_quantity = :1 WHERE donation_ID = :2`,
+                [newTotal, don_ID]
+            );
+            
+            // --- STEP 6: Manage Staff Assignment (existing code) ---
             if (staff_ID && staff_ID !== "") {
-                // A staff member was selected. Update or Insert the link.
                 const parsedStaffId = parseInt(staff_ID, 10);
-                const mgmtCheck = await connection.execute(`SELECT management_ID FROM Donation_Management WHERE donation_ID = :1`, [don_ID]);
+                const mgmtCheck = await connection.execute(
+                    `SELECT management_ID FROM Donation_Management WHERE donation_ID = :1`, 
+                    [don_ID]
+                );
                 
                 if (mgmtCheck.rows.length > 0) {
                     await connection.execute(
                         `UPDATE Donation_Management SET staff_ID = :1 WHERE donation_ID = :2`, 
-                        [parsedStaffId, don_ID], 
-                        { autoCommit: true }
+                        [parsedStaffId, don_ID]
                     );
                 } else {
                     const mgmt_ID = Math.floor(Math.random() * 90000) + 10000;
                     await connection.execute(
                         `INSERT INTO Donation_Management (management_ID, staff_ID, donation_ID) VALUES (:1, :2, :3)`, 
-                        [mgmt_ID, parsedStaffId, don_ID], 
-                        { autoCommit: true }
+                        [mgmt_ID, parsedStaffId, don_ID]
                     );
                 }
             } else {
-                // The user explicitly selected "-- Unassigned --" (which sends an empty staff_ID).
-                // Delete the management link entirely so the system knows nobody is managing it.
                 await connection.execute(
                     `DELETE FROM Donation_Management WHERE donation_ID = :1`, 
-                    [don_ID], 
-                    { autoCommit: true }
+                    [don_ID]
                 );
             }
         }
+        
         res.json({ message: "Item updated successfully!" });
     } catch (err) { 
+        console.error("Update Error:", err.message);
         res.status(500).json({ error: err.message }); 
     } finally { 
         if (connection) await connection.close(); 
