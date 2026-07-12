@@ -274,39 +274,6 @@
             height: 100% !important;
         }
 
-        /* ----- RECIPIENT VIEW (inventory on dashboard) ----- */
-        #recipientInventorySection {
-            display: none;
-        }
-        #recipientInventorySection h3 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1a2a41;
-            margin-bottom: 16px;
-        }
-        #recipientInventorySection table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-        #recipientInventorySection th,
-        #recipientInventorySection td {
-            padding: 12px 14px;
-            border-bottom: 1px solid #e9edf4;
-            text-align: left;
-        }
-        #recipientInventorySection th {
-            background: #f7f9fc;
-            font-weight: 600;
-            color: #2a3f5a;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        #recipientInventorySection tr:hover td {
-            background: #fafbff;
-        }
-
         /* ----- RESPONSIVE ----- */
         @media (max-width: 1024px) {
             .charts-grid {
@@ -342,18 +309,13 @@
             }
         }
 
-        /* ----- HELPER: staff-only ----- */
+        /* Hide management panel by default */
         .staff-only {
             display: none;
         }
+        /* This class is used by JS to show the panel when needed */
         .staff-only.show {
             display: block;
-        }
-        .staff-only-cell {
-            display: none;
-        }
-        .staff-only-cell.show {
-            display: table-cell;
         }
 
         .empty-state {
@@ -434,7 +396,7 @@
         <!-- ============================================ -->
         <section class="action-section" id="actionSection">
 
-            <!-- Daily Operations -->
+            <!-- Daily Operations (visible to all staff) -->
             <div class="action-panel">
                 <div class="panel-title">📋 Daily Operations</div>
                 <div class="action-grid">
@@ -444,8 +406,8 @@
                 </div>
             </div>
 
-            <!-- Management Tools (Staff only) -->
-            <div class="action-panel staff-only show" id="mgmtPanel">
+            <!-- Management Tools (role-based visibility via JS) -->
+            <div class="action-panel staff-only" id="mgmtPanel">
                 <div class="panel-title">⚙️ Management Tools</div>
                 <div class="action-grid">
                     <button class="action-btn purple" id="overviewBtn" onclick="window.location.href='/donations-overview.html'">📊 Donation Overview</button>
@@ -461,7 +423,7 @@
         <!-- ============================================ -->
         <section id="staffGraphsSection" class="show">
 
-            <!-- Row 1: New Staff Workload + Expiry Chart -->
+            <!-- Row 1: Staff Workload + Expiry Chart -->
             <div class="charts-grid">
                 <!-- Graph 1: Total Items Managed by Staff (Horizontal Bar) -->
                 <div class="chart-card">
@@ -513,29 +475,6 @@
 
         </section>
 
-        <!-- ============================================ -->
-        <!-- RECIPIENT VIEW – Inventory Table on Dashboard -->
-        <!-- ============================================ -->
-        <section id="recipientInventorySection">
-            <h3>📋 Available Food Inventory</h3>
-            <div style="overflow-x:auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Type</th>
-                            <th>Quantity</th>
-                            <th>Expiry Date</th>
-                        </tr>
-                    </thead>
-                    <tbody id="recipientInventoryTable">
-                        <tr><td colspan="5" style="text-align:center; padding:30px;">Loading inventory…</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
     </div>
     <!-- /app-wrapper -->
 
@@ -569,34 +508,45 @@
             currentUser = parsed.user;
             currentRole = parsed.role || 'Staff';
 
-            const isStaff = (currentRole === 'Staff');
-            document.querySelectorAll('.staff-only').forEach(el => {
-                if (isStaff) el.classList.add('show');
-                else el.classList.remove('show');
-            });
+            // ----- Role‑based visibility for Management Tools -----
+            const role = currentUser.ROLE || 'Staff';
+            const mgmtPanel = document.getElementById('mgmtPanel');
+            const overviewBtn = document.getElementById('overviewBtn');
+            const manageUsersBtn = document.getElementById('manageUsersBtn');
+            const adminBtn = document.getElementById('adminBtn');
 
+            // Hide everything by default
+            mgmtPanel.style.display = 'none';
+            overviewBtn.style.display = 'none';
+            manageUsersBtn.style.display = 'none';
+            adminBtn.style.display = 'none';
+
+            // Managers and Admins can see the panel + Donation Overview
+            if (role === 'Admin' || role === 'Manager') {
+                mgmtPanel.style.display = 'block';
+                overviewBtn.style.display = 'inline-flex';
+            }
+
+            // Only Admins can see the other two buttons
+            if (role === 'Admin') {
+                manageUsersBtn.style.display = 'inline-flex';
+                adminBtn.style.display = 'inline-flex';
+            }
+
+            // Show/hide staff graphs (always shown for staff)
             const graphsSection = document.getElementById('staffGraphsSection');
-            if (isStaff) {
+            if (currentRole === 'Staff') {
                 graphsSection.classList.add('show');
             } else {
                 graphsSection.classList.remove('show');
             }
 
-            const recipientSection = document.getElementById('recipientInventorySection');
-            if (currentRole === 'Recipient') {
-                recipientSection.style.display = 'block';
-                document.getElementById('mgmtPanel').style.display = 'none';
-            } else {
-                recipientSection.style.display = 'none';
-                document.getElementById('mgmtPanel').style.display = 'block';
-            }
-
-            const name = isStaff ? currentUser.NAME_STAFF : currentUser.NAME_RECIPIENT;
-            document.getElementById('welcomeMessage').innerText = `Welcome, ${name || 'User'}`;
+            // Update header
+            const name = currentUser.NAME_STAFF || 'Staff';
+            document.getElementById('welcomeMessage').innerText = `Welcome, ${name}`;
             document.getElementById('roleBadge').innerText = `👤 ${currentRole}`;
-            document.getElementById('roleSubtext').innerText = isStaff ?
-                'Staff Dashboard · Manage donations & inventory' :
-                'Recipient Dashboard · Browse available items';
+            document.getElementById('roleSubtext').innerText =
+                'Staff Dashboard · Manage donations & inventory';
 
             return true;
         }
@@ -667,33 +617,10 @@
         }
 
         // ============================================================
-        //  RECIPIENT INVENTORY TABLE
-        // ============================================================
-        function renderRecipientInventory() {
-            const tbody = document.getElementById('recipientInventoryTable');
-            if (!allItems.length) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;">No items available.</td></tr>';
-                return;
-            }
-            let html = '';
-            allItems.forEach(item => {
-                const exp = item.EXPIRY_DATE ? new Date(item.EXPIRY_DATE).toLocaleDateString() : 'N/A';
-                html += `<tr>
-                            <td>${item.ITEM_ID}</td>
-                            <td><strong>${item.NAME || '—'}</strong></td>
-                            <td>${item.TYPE || '—'}</td>
-                            <td>${item.STOCK_QUANTITY || 0}</td>
-                            <td>${exp}</td>
-                        </tr>`;
-            });
-            tbody.innerHTML = html;
-        }
-
-        // ============================================================
         //  CHARTS – STAFF DASHBOARD
         // ============================================================
 
-        // -- NEW: Total Items Managed by Staff (Horizontal Bar) --
+        // -- 1. Total Items Managed by Staff (Horizontal Bar) --
         function buildStaffWorkloadChart() {
             const ctx = document.getElementById('staffWorkloadChart').getContext('2d');
 
@@ -709,10 +636,10 @@
                 staffMap[staffId].total += qty;
             });
 
-            // Convert to array, sort descending, limit to top 10 (or show all)
+            // Convert to array, sort descending, limit to top 12
             const sorted = Object.values(staffMap)
                 .sort((a, b) => b.total - a.total)
-                .slice(0, 12); // show up to 12 staff
+                .slice(0, 12);
 
             const labels = sorted.map(d => d.name.length > 20 ? d.name.slice(0, 18) + '…' : d.name);
             const data = sorted.map(d => d.total);
@@ -732,7 +659,7 @@
                     }]
                 },
                 options: {
-                    indexAxis: 'y', // horizontal bar
+                    indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
@@ -757,7 +684,7 @@
             });
         }
 
-        // -- Expiry Date Chart (Bar by month) --
+        // -- 2. Expiry Date Chart (Bar by month) --
         function buildExpiryChart() {
             const ctx = document.getElementById('expiryChart').getContext('2d');
 
@@ -816,7 +743,7 @@
             });
         }
 
-        // -- Donation Status (Doughnut) --
+        // -- 3. Donation Status (Doughnut) --
         function buildStatusChart() {
             const ctx = document.getElementById('statusChart').getContext('2d');
 
@@ -855,7 +782,7 @@
             });
         }
 
-        // -- Donor Contribution (Horizontal Bar) --
+        // -- 4. Donor Contribution (Horizontal Bar) --
         function buildDonorChart() {
             const ctx = document.getElementById('donorContributionChart').getContext('2d');
 
@@ -913,12 +840,7 @@
                 fetchStaff()
             ]);
 
-            if (currentRole === 'Recipient') {
-                renderRecipientInventory();
-                return;
-            }
-
-            // Staff: re-fetch latest data
+            // Re‑fetch fresh data for charts
             try {
                 const itemsRes = await fetch('/api/items');
                 allItems = await itemsRes.json();
@@ -934,6 +856,7 @@
             buildStatusChart();
             buildDonorChart();
 
+            // Resize charts after a short delay for proper rendering
             setTimeout(() => {
                 if (chartWorkload) chartWorkload.resize();
                 if (chartExpiry) chartExpiry.resize();
@@ -947,6 +870,7 @@
         // ============================================================
         document.addEventListener('DOMContentLoaded', initDashboard);
 
+        // Handle window resize to redraw charts smoothly
         let resizeTimer;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);

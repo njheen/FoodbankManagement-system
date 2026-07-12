@@ -91,9 +91,14 @@
 
         const data = await res.json();
         if (data.success) {
-            // Save user session in the browser
+            // Save user session
             localStorage.setItem('session', JSON.stringify(data));
-            window.location.href = '/'; // Redirect to index
+            // Redirect based on role
+            if (data.role === 'Recipient') {
+                window.location.href = '/recipient-inventory.html';
+            } else {
+                window.location.href = '/';
+            }
         } else {
             alert(data.error);
         }
