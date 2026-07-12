@@ -1,703 +1,963 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Donation System</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Staff Dashboard · Donation System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js">
+    </script>
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f9; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: #0056b3; color: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px;}
-        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-        th { background: #f8f9fa; }
-        .form-group { margin-bottom: 15px; }
-        input, select, button { padding: 8px; box-sizing: border-box; }
-        .btn { border: none; cursor: pointer; font-weight: bold; border-radius: 4px; padding: 8px 12px;}
-        .btn-green { background: #28a745; color: white; width: 100%; }
-        .btn-red { background: #dc3545; color: white; }
-        .btn-blue { background: #007bff; color: white; }
-        .btn-logout { background: #dc3545; color: white; }
-        .staff-only { display: none; }
-        
-        /* STATISTICS CARDS */
+        /* ----- RESET & BASE ----- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f8;
+            padding: 24px;
+            color: #1a2332;
+        }
+
+        .app-wrapper {
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* ----- HEADER ----- */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #0b2a4f 0%, #1a3f6e 100%);
+            color: #fff;
+            padding: 18px 28px;
+            border-radius: 20px;
+            margin-bottom: 28px;
+            box-shadow: 0 6px 18px rgba(11, 42, 79, 0.25);
+        }
+
+        .dashboard-header .greeting h1 {
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+        .dashboard-header .greeting span {
+            font-size: 14px;
+            opacity: 0.8;
+            font-weight: 400;
+            display: block;
+            margin-top: 2px;
+        }
+        .dashboard-header .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .dashboard-header .header-actions .role-badge {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 13px;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .btn-logout {
+            background: rgba(255, 255, 255, 0.10);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #fff;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-logout:hover {
+            background: rgba(255, 70, 70, 0.35);
+            border-color: rgba(255, 70, 70, 0.4);
+        }
+
+        /* ----- STATS CARDS ----- */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
         }
+
         .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            text-align: center;
-            transition: transform 0.2s;
+            background: #fff;
+            padding: 22px 20px 18px;
+            border-radius: 18px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e9edf4;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 14px;
         }
         .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+        }
+        .stat-card .stat-icon {
+            font-size: 32px;
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f4ff;
+            flex-shrink: 0;
+        }
+        .stat-card .stat-info {
+            flex: 1;
         }
         .stat-card .stat-number {
-            font-size: 32px;
-            font-weight: bold;
-            color: #0056b3;
-            margin: 5px 0;
+            font-size: 28px;
+            font-weight: 700;
+            color: #0b2a4f;
+            line-height: 1.2;
         }
         .stat-card .stat-label {
             font-size: 13px;
-            color: #666;
+            color: #6b7a93;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+        }
+        .stat-card.expiry .stat-number {
+            color: #d43f34;
+        }
+        .stat-card.pending .stat-number {
+            color: #d48c2b;
+        }
+        .stat-card.items .stat-number {
+            color: #1e7b4a;
+        }
+        .stat-card.recipients .stat-number {
+            color: #1f7f8c;
+        }
+
+        /* ----- ACTION BUTTONS ----- */
+        .action-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 32px;
+        }
+
+        .action-panel {
+            background: #fff;
+            border-radius: 18px;
+            padding: 20px 22px 22px;
+            border: 1px solid #e9edf4;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+        .action-panel .panel-title {
+            font-size: 12px;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            color: #8a9bb0;
+            margin-bottom: 14px;
         }
-        .stat-card .stat-icon {
-            font-size: 28px;
-            margin-bottom: 5px;
+        .action-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
         }
-        .stat-card.pending .stat-number { color: #d39e00; }
-        .stat-card.expiry .stat-number { color: #dc3545; }
-        .stat-card.items .stat-number { color: #28a745; }
-        .stat-card.recipients .stat-number { color: #17a2b8; }
+        .action-btn {
+            flex: 1 0 auto;
+            min-width: 130px;
+            padding: 11px 16px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f0f4fe;
+            color: #1a3f6e;
+        }
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+        }
+        .action-btn.primary {
+            background: #1a3f6e;
+            color: #fff;
+        }
+        .action-btn.primary:hover {
+            background: #0b2a4f;
+        }
+        .action-btn.green {
+            background: #e6f5ed;
+            color: #1a6e4a;
+        }
+        .action-btn.green:hover {
+            background: #cdeade;
+        }
+        .action-btn.purple {
+            background: #eee9fc;
+            color: #5b3d9e;
+        }
+        .action-btn.purple:hover {
+            background: #e0d8f7;
+        }
+        .action-btn.teal {
+            background: #e3f3f5;
+            color: #1a6f7a;
+        }
+        .action-btn.teal:hover {
+            background: #cce9ec;
+        }
+        .action-btn.orange {
+            background: #fef0e6;
+            color: #b85e2a;
+        }
+        .action-btn.orange:hover {
+            background: #fce4d4;
+        }
 
-        /* Filter row styling */
-            .filter-container {
-                display: flex;
+        /* ----- CHARTS GRID ----- */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+            margin-bottom: 28px;
+        }
+
+        .chart-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 20px 20px 14px;
+            border: 1px solid #e9edf4;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+            transition: 0.2s;
+        }
+        .chart-card:hover {
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.06);
+        }
+        .chart-card .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .chart-card .chart-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a2a41;
+        }
+        .chart-card .chart-header .chart-badge {
+            font-size: 11px;
+            font-weight: 500;
+            color: #6b7a93;
+            background: #f0f2f8;
+            padding: 3px 12px;
+            border-radius: 30px;
+        }
+        .chart-card .chart-container {
+            position: relative;
+            height: 210px;
+        }
+        .chart-card .chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* ----- RECIPIENT VIEW (inventory on dashboard) ----- */
+        #recipientInventorySection {
+            display: none;
+        }
+        #recipientInventorySection h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a2a41;
+            margin-bottom: 16px;
+        }
+        #recipientInventorySection table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        #recipientInventorySection th,
+        #recipientInventorySection td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #e9edf4;
+            text-align: left;
+        }
+        #recipientInventorySection th {
+            background: #f7f9fc;
+            font-weight: 600;
+            color: #2a3f5a;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        #recipientInventorySection tr:hover td {
+            background: #fafbff;
+        }
+
+        /* ----- RESPONSIVE ----- */
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 700px) {
+            .action-section {
+                grid-template-columns: 1fr;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .dashboard-header {
                 flex-direction: column;
-                gap: 15px;
-                background: #f9f9f9;
-                padding: 15px;
-                border-radius: 8px;
-                border: 1px solid #ddd;
-                margin-bottom: 20px;
+                align-items: flex-start;
+                gap: 12px;
             }
-            .filter-row-inner {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 15px;
-                align-items: flex-end;
-            }
-            .filter-group {
-                flex: 1;
-                min-width: 140px;
-            }
-            .filter-group label {
-                display: block;
-                font-size: 12px;
-                font-weight: 600;
-                color: #555;
-                margin-bottom: 3px;
-            }
-            .filter-group input,
-            .filter-group select {
+            .dashboard-header .header-actions {
                 width: 100%;
-                padding: 7px 10px;
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                font-size: 13px;
-                background: white;
-                height: 36px;
-                box-sizing: border-box;
+                justify-content: flex-start;
             }
-            .filter-group input:focus,
-            .filter-group select:focus {
-                border-color: #007bff;
-                outline: none;
-                box-shadow: 0 0 0 2px rgba(0,123,255,0.15);
+        }
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
             }
-            .staff-filter-group {
-                display: flex;
-                gap: 15px;
-                flex: 2; /* Occupies 2 fractional units of space */
-                min-width: 295px;
+            body {
+                padding: 12px;
             }
-            .staff-filter-group .filter-group {
-                flex: 1;
-                min-width: 0; 
+            .dashboard-header {
+                padding: 16px 18px;
             }
-            .sort-group {
-                flex: 2; /* Matches width of the staff group to keep alignment */
-                min-width: 200px;
-            }
-            .clear-group {
-                flex: 1;
-                display: flex;
-                justify-content: flex-end;
-            }
-            .btn-clear {
-                background: #6c757d;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 7px 18px;
-                cursor: pointer;
-                font-weight: 600;
-                font-size: 13px;
-                height: 36px;
-                white-space: nowrap;
-                width: 100%; /* Stretches the button to match the image layout */
-            }
-            .btn-clear:hover {
-                background: #5a6268;
-            }
+        }
+
+        /* ----- HELPER: staff-only ----- */
+        .staff-only {
+            display: none;
+        }
+        .staff-only.show {
+            display: block;
+        }
+        .staff-only-cell {
+            display: none;
+        }
+        .staff-only-cell.show {
+            display: table-cell;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #8a9bb0;
+        }
+        .empty-state .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        .empty-state p {
+            font-size: 15px;
+        }
+
+        #staffGraphsSection {
+            display: none;
+        }
+        #staffGraphsSection.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <div id="welcomeMessage">Welcome!</div>
-        <button class="btn btn-logout" onclick="logout()">Logout</button>
-    </div>
-    
-    <div id="adminPanel" class="staff-only" style="background: #e9ecef; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-        
-        <!-- Statistics Cards -->
-        <div class="stats-grid" id="statsGrid">
+    <div class="app-wrapper">
+
+        <!-- ============================================ -->
+        <!-- HEADER -->
+        <!-- ============================================ -->
+        <header class="dashboard-header">
+            <div class="greeting">
+                <h1 id="welcomeMessage">Welcome, Staff</h1>
+                <span id="roleSubtext">Staff Dashboard · Manage donations &amp; inventory</span>
+            </div>
+            <div class="header-actions">
+                <span class="role-badge" id="roleBadge">👤 Staff</span>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <!-- ============================================ -->
+        <!-- STATS CARDS -->
+        <!-- ============================================ -->
+        <section class="stats-grid" id="statsGrid">
             <div class="stat-card items">
                 <div class="stat-icon">📦</div>
-                <div class="stat-label">Total Items in Inventory</div>
-                <div class="stat-number" id="totalItems">0</div>
+                <div class="stat-info">
+                    <div class="stat-number" id="totalItems">0</div>
+                    <div class="stat-label">Total Inventory Items</div>
+                </div>
             </div>
             <div class="stat-card expiry">
                 <div class="stat-icon">⚠️</div>
-                <div class="stat-label">Items Near Expiry (7 days)</div>
-                <div class="stat-number" id="nearExpiry">0</div>
+                <div class="stat-info">
+                    <div class="stat-number" id="nearExpiry">0</div>
+                    <div class="stat-label">Expiring in 7 days</div>
+                </div>
             </div>
             <div class="stat-card recipients">
                 <div class="stat-icon">👥</div>
-                <div class="stat-label">Registered Recipients</div>
-                <div class="stat-number" id="totalRecipients">0</div>
+                <div class="stat-info">
+                    <div class="stat-number" id="totalRecipients">0</div>
+                    <div class="stat-label">Registered Recipients</div>
+                </div>
             </div>
             <div class="stat-card pending">
                 <div class="stat-icon">⏳</div>
-                <div class="stat-label">Pending Donation Batches</div>
-                <div class="stat-number" id="pendingDonations">0</div>
-            </div>
-        </div>
-        
-        <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 20px;">
-            
-            <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <div style="font-size: 12px; font-weight: bold; color: #777; text-transform: uppercase; margin-bottom: 5px;">Daily Operations</div>
-                
-                <button class="btn btn-green" style="text-align: left; padding: 10px;" onclick="window.location.href='/add-items.html'">📦 Add New Items</button>
-                <button class="btn" style="background-color: #28a745; color: white; text-align: left; padding: 10px;" onclick="window.location.href='/donors.html'">👥 Manage Donors</button>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <div style="font-size: 12px; font-weight: bold; color: #777; text-transform: uppercase; margin-bottom: 5px;">Management Tools</div>
-                
-                <button id="overviewBtn" class="btn" style="display: none; background-color: #6f42c1; color: white; text-align: left; padding: 10px;" onclick="window.location.href='/donations-overview.html'">📊 Donation Overview</button>
-                <button id="manageUsersBtn" class="btn btn-blue" style="display: none; text-align: left; padding: 10px;" onclick="window.location.href='/manage-users.html'">⚙️ Manage Users</button>
-                <button id="adminBtn" class="btn" style="display: none; background-color: #17a2b8; color: white; text-align: left; padding: 10px;" onclick="window.location.href='/register-staff.html'">➕ Register Staff</button>
-            </div>
-
-        </div>
-
-        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-top: 20px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-            <h3 style="margin-top: 0; color: #333; font-size: 16px; text-transform: uppercase;">Inventory Distribution by Type</h3>
-            <div style="width: 100%; max-width: 350px;">
-                <canvas id="inventoryChart"></canvas>
-            </div>
-        </div>
-
-    </div>
-
-
-    <!-- Recipient welcome board -->
-    <div id="recipientInfoBoard" style="display: none; background: #e8f4f8; padding: 20px; border-radius: 8px; border-left: 6px solid #17a2b8; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-        <h3 style="margin-top: 0; color: #0c5460; font-size: 18px;">👋 Welcome to the Community Portal!</h3>
-        <p style="color: #333; line-height: 1.6; font-size: 15px;">
-            We are thrilled to have you here. Below you can browse all currently available items. If you see something you need, please visit our center during operating hours.
-        </p>
-        
-        <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #b8daff; margin-top: 15px;">
-            <h4 style="margin-top: 0; color: #0056b3; font-size: 15px;">📌 Important Announcements</h4>
-            <ul style="margin-bottom: 0; color: #444; line-height: 1.6;">
-                <li><strong>Distribution Hours:</strong> Monday to Friday, 9:00 AM - 4:00 PM.</li>
-                <li><strong>Special Notice:</strong> Fresh produce and bread arrive every Wednesday morning.</li>
-                <li><strong>Location:</strong> Kechara Soup Kitchen Foodbank, Main Community Hall, Petaling Jaya, Selangor.</li>
-            </ul>
-        </div>
-    </div>
-
-
-            <!-- ====== FILTER ROW ====== -->
-        <div class="filter-container">
-            <div class="filter-row-inner">
-                <div class="filter-group">
-                    <label>Search by Name</label>
-                    <input type="text" id="searchName" placeholder="e.g., Canned Beans" oninput="applyFilters()">
+                <div class="stat-info">
+                    <div class="stat-number" id="pendingDonations">0</div>
+                    <div class="stat-label">Pending Donation Batches</div>
                 </div>
-                <div class="filter-group">
-                    <label>Filter by Type</label>
-                    <input type="text" id="searchType" placeholder="e.g., Food" oninput="applyFilters()">
-                </div>
-                <div class="filter-group">
-                    <label>Filter by Expiry Date</label>
-                    <input type="date" id="searchExpiry" onchange="applyFilters()">
-                </div>
+            </div>
+        </section>
 
-                <div id="staffFilters" class="staff-filter-group">
-                    <div class="filter-group">
-                        <label>Managing Staff</label>
-                        <select id="filterStaff" onchange="applyFilters()">
-                            <option value="">All Staff</option>
-                        </select>
+        <!-- ============================================ -->
+        <!-- ACTION BUTTONS -->
+        <!-- ============================================ -->
+        <section class="action-section" id="actionSection">
+
+            <!-- Daily Operations -->
+            <div class="action-panel">
+                <div class="panel-title">📋 Daily Operations</div>
+                <div class="action-grid">
+                    <button class="action-btn primary" onclick="window.location.href='/add-items.html'">📦 Add New Items</button>
+                    <button class="action-btn green" onclick="window.location.href='/donors.html'">👥 Manage Donors</button>
+                    <button class="action-btn teal" onclick="window.location.href='/inventory-list.html'">📋 Food Inventory</button>
+                </div>
+            </div>
+
+            <!-- Management Tools (Staff only) -->
+            <div class="action-panel staff-only show" id="mgmtPanel">
+                <div class="panel-title">⚙️ Management Tools</div>
+                <div class="action-grid">
+                    <button class="action-btn purple" id="overviewBtn" onclick="window.location.href='/donations-overview.html'">📊 Donation Overview</button>
+                    <button class="action-btn orange" id="manageUsersBtn" onclick="window.location.href='/manage-users.html'">👤 Manage Users</button>
+                    <button class="action-btn primary" id="adminBtn" onclick="window.location.href='/register-staff.html'">➕ Register Staff</button>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ============================================ -->
+        <!-- STAFF GRAPHS SECTION                         -->
+        <!-- ============================================ -->
+        <section id="staffGraphsSection" class="show">
+
+            <!-- Row 1: New Staff Workload + Expiry Chart -->
+            <div class="charts-grid">
+                <!-- Graph 1: Total Items Managed by Staff (Horizontal Bar) -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>📦 Items Managed by Staff</h3>
+                        <span class="chart-badge">current totals</span>
                     </div>
-                    <div class="filter-group">
-                        <label>Staff ID</label>
-                        <input type="text" id="filterStaffId" placeholder="e.g., 101" oninput="applyFilters()">
+                    <div class="chart-container">
+                        <canvas id="staffWorkloadChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Graph 2: Expiry Date Distribution -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>📅 Items by Expiry Month</h3>
+                        <span class="chart-badge">quantity</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="expiryChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <div class="filter-row-inner">
-                <div class="filter-group sort-group">
-                    <label>Sort by Quantity</label>
-                    <select id="sortQty" onchange="applyFilters()">
-                        <option value="">None</option>
-                        <option value="asc">Ascending</option>
-                        <option value="desc">Descending</option>
-                    </select>
+            <!-- Row 2: Status Doughnut + Donor Contribution -->
+            <div class="charts-grid">
+                <!-- Graph 3: Donation Status Distribution -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>🔄 Donation Batch Status</h3>
+                        <span class="chart-badge">all batches</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
                 </div>
-                <div class="filter-group sort-group">
-                    <label>Sort by Expiry Date</label>
-                    <select id="sortExpiry" onchange="applyFilters()">
-                        <option value="">None</option>
-                        <option value="asc">Ascending</option>
-                        <option value="desc">Descending</option>
-                    </select>
-                </div>
-                <div class="filter-group clear-group">
-                    <button class="btn-clear" onclick="clearFilters()">Clear All</button>
+
+                <!-- Graph 4: Top Donors by Contribution -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>🏆 Top Donors by Items Donated</h3>
+                        <span class="chart-badge">total quantity</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="donorContributionChart"></canvas>
+                    </div>
                 </div>
             </div>
-        </div>
 
-    <h3>Available Food Inventory</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Quantity</th>
-                <th>Expiry Date</th>
-                <th class="staff-only" style="display: none; background: #e9ecef;">Donation ID</th>
-                <th class="staff-only" style="display: none; background: #e9ecef;">Managed By</th>
-                <th class="staff-only" style="display: none;">Actions</th>
-            </tr>
-        </thead>
-        <tbody id="inventoryTable">
-        </tbody>
-    </table>
-</div>
+        </section>
 
-<script>
-let currentUser = null;
-let currentInventory = [];
-let inventoryChartInstance = null;
-let staffList = []; // for filter dropdown
+        <!-- ============================================ -->
+        <!-- RECIPIENT VIEW – Inventory Table on Dashboard -->
+        <!-- ============================================ -->
+        <section id="recipientInventorySection">
+            <h3>📋 Available Food Inventory</h3>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Expiry Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recipientInventoryTable">
+                        <tr><td colspan="5" style="text-align:center; padding:30px;">Loading inventory…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-// ==========================================
-// STATISTICS FUNCTIONS
-// ==========================================
+    </div>
+    <!-- /app-wrapper -->
 
-async function loadStatistics() {
-    try {
-        const itemsRes = await fetch('/api/items');
-        const items = await itemsRes.json();
-        currentInventory = items;
-        
-        let totalQty = 0;
-        let nearExpiry = 0;
-        const today = new Date();
-        const sevenDaysFromNow = new Date();
-        sevenDaysFromNow.setDate(today.getDate() + 7);
-        
-        items.forEach(item => {
-            const qty = parseInt(item.STOCK_QUANTITY) || 0;
-            totalQty += qty;
-            if (item.EXPIRY_DATE) {
-                const expiryDate = new Date(item.EXPIRY_DATE);
-                if (expiryDate >= today && expiryDate <= sevenDaysFromNow) {
-                    nearExpiry += qty;
-                }
+    <script>
+        // ============================================================
+        //  GLOBALS
+        // ============================================================
+        let currentUser = null;
+        let currentRole = null;
+        let allItems = [];
+        let allDonations = [];
+        let allDonors = [];
+        let allStaff = [];
+
+        // Chart instances
+        let chartWorkload = null;
+        let chartExpiry = null;
+        let chartStatus = null;
+        let chartDonor = null;
+
+        // ============================================================
+        //  AUTH
+        // ============================================================
+        function checkAuth() {
+            const sessionData = localStorage.getItem('session');
+            if (!sessionData) {
+                window.location.href = '/login.html';
+                return false;
             }
-        });
-        
-        document.getElementById('totalItems').textContent = totalQty;
-        document.getElementById('nearExpiry').textContent = nearExpiry;
-        
-        const recipientsRes = await fetch('/api/admin/recipients');
-        const recipients = await recipientsRes.json();
-        document.getElementById('totalRecipients').textContent = recipients.length || 0;
-        
-        const donationsRes = await fetch('/api/donations');
-        const donations = await donationsRes.json();
-        const pending = donations.filter(d => d.STATUS === 'Pending');
-        document.getElementById('pendingDonations').textContent = pending.length || 0;
-        
-        renderChart(items);
-        
-    } catch (error) {
-        console.error("Error loading statistics:", error);
-    }
-}
+            const parsed = JSON.parse(sessionData);
+            currentUser = parsed.user;
+            currentRole = parsed.role || 'Staff';
 
-// ==========================================
-// CHART
-// ==========================================
+            const isStaff = (currentRole === 'Staff');
+            document.querySelectorAll('.staff-only').forEach(el => {
+                if (isStaff) el.classList.add('show');
+                else el.classList.remove('show');
+            });
 
-function renderChart(data) {
-    const typeCounts = {};
-    data.forEach(item => {
-        const type = item.TYPE || 'Unknown';
-        const qty = parseInt(item.STOCK_QUANTITY, 10) || 0;
-        if (typeCounts[type]) {
-            typeCounts[type] += qty;
-        } else {
-            typeCounts[type] = qty;
-        }
-    });
-
-    const labels = Object.keys(typeCounts);
-    const values = Object.values(typeCounts);
-
-    const backgroundColors = labels.map((_, index) => {
-        const hue = (index * 360) / labels.length;
-        return `hsl(${hue}, 70%, 55%)`;
-    });
-
-    const ctx = document.getElementById('inventoryChart').getContext('2d');
-    if (inventoryChartInstance) {
-        inventoryChartInstance.destroy();
-    }
-
-    inventoryChartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: values,
-                backgroundColor: backgroundColors,
-                borderWidth: 2,
-                borderColor: '#ffffff'
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                }
-            }
-        }
-    });
-}
-
-// ==========================================
-// LOAD STAFF FOR FILTER DROPDOWN
-// ==========================================
-
-async function loadStaffFilter() {
-    try {
-        const res = await fetch('/api/staff/list');
-        staffList = await res.json();
-        const select = document.getElementById('filterStaff');
-        // Keep "All Staff" option
-        staffList.forEach(s => {
-            const option = document.createElement('option');
-            option.value = s.STAFF_ID;
-            option.textContent = `${s.NAME_STAFF} (${s.ROLE})`;
-            select.appendChild(option);
-        });
-    } catch (err) {
-        console.error("Failed to load staff filter:", err);
-    }
-}
-
-// ==========================================
-// AUTHENTICATION
-// ==========================================
-
-function checkAuth() {
-    const sessionData = localStorage.getItem('session');
-    if (!sessionData) {
-        window.location.href = '/login.html';
-        return;
-    }
-
-    const sessionStr = localStorage.getItem('session');
-    if (sessionStr) {
-        const userSession = JSON.parse(sessionStr);
-        if (userSession.user) {
-            const role = userSession.user.ROLE;
-            if (role === 'Admin' || role === 'Manager') {
-                document.getElementById('overviewBtn').style.display = 'block';
-            }
-            if (role === 'Admin') {
-                document.getElementById('adminBtn').style.display = 'block';
-                document.getElementById('manageUsersBtn').style.display = 'block';
-                document.getElementById('adminPanel').style.display = 'block';
-            }
-        }
-    }
-    
-    currentUser = JSON.parse(sessionData);
-    const name = currentUser.role === 'Staff' ? currentUser.user.NAME_STAFF : currentUser.user.NAME_RECIPIENT;
-    document.getElementById('welcomeMessage').innerText = `Welcome, ${name} (${currentUser.role})`;
-
-    if (currentUser.role === 'Staff') {
-        document.querySelectorAll('.staff-only').forEach(el => el.style.display = 'table-cell');
-        document.getElementById('adminPanel').style.display = 'block';
-        document.getElementById('staffFilters').style.display = 'flex';
-        loadStatistics();
-        loadStaffFilter(); // populate staff dropdown
-        loadItems();
-    }
-
-    if (currentUser.role === 'Recipient') {
-        document.getElementById('recipientInfoBoard').style.display = 'block';
-        document.getElementById('staffFilters').style.display = 'none';
-        loadItems();
-    }
-}
-
-// ==========================================
-// LOGOUT
-// ==========================================
-
-function logout() {
-    localStorage.removeItem('session');
-    window.location.href = '/login.html';
-}
-
-// ==========================================
-// INVENTORY FUNCTIONS with NEW Filters & Sorts
-// ==========================================
-
-async function loadItems() {
-    try {
-        const res = await fetch('/api/items');
-        currentInventory = await res.json();
-        applyFilters(); // apply all filters and render
-    } catch (error) {
-        console.error("Error loading items:", error);
-    }
-}
-
-function applyFilters() {
-    // 1. Get raw data
-    let data = currentInventory.slice();
-
-    // 2. Text filters
-    const nameQuery = document.getElementById('searchName').value.toLowerCase().trim();
-    const typeQuery = document.getElementById('searchType').value.toLowerCase().trim();
-    const expiryQuery = document.getElementById('searchExpiry').value;
-
-    // 3. Staff filters
-    const staffIdFilter = document.getElementById('filterStaff').value;
-    const staffIdSearch = document.getElementById('filterStaffId').value.trim();
-
-    // 4. Apply filters
-    data = data.filter(item => {
-        // Name
-        if (nameQuery && !(item.NAME || '').toLowerCase().includes(nameQuery)) return false;
-        // Type
-        if (typeQuery && !(item.TYPE || '').toLowerCase().includes(typeQuery)) return false;
-        // Expiry date exact match
-        if (expiryQuery) {
-            const itemDate = item.EXPIRY_DATE ? new Date(item.EXPIRY_DATE).toISOString().split('T')[0] : '';
-            if (itemDate !== expiryQuery) return false;
-        }
-        // Staff ID dropdown
-        if (staffIdFilter) {
-            const staffIdNum = parseInt(staffIdFilter, 10);
-            if (item.STAFF_ID !== staffIdNum) return false;
-        }
-        // Staff ID search (text input, matches staff_ID exactly or manager_name contains)
-        if (staffIdSearch) {
-            const searchNum = parseInt(staffIdSearch, 10);
-            // If search is numeric, match staff_ID, else match manager_name
-            if (!isNaN(searchNum)) {
-                if (item.STAFF_ID !== searchNum) return false;
+            const graphsSection = document.getElementById('staffGraphsSection');
+            if (isStaff) {
+                graphsSection.classList.add('show');
             } else {
-                // treat as text search on manager_name
-                if (!(item.MANAGER_NAME || '').toLowerCase().includes(staffIdSearch.toLowerCase())) return false;
+                graphsSection.classList.remove('show');
+            }
+
+            const recipientSection = document.getElementById('recipientInventorySection');
+            if (currentRole === 'Recipient') {
+                recipientSection.style.display = 'block';
+                document.getElementById('mgmtPanel').style.display = 'none';
+            } else {
+                recipientSection.style.display = 'none';
+                document.getElementById('mgmtPanel').style.display = 'block';
+            }
+
+            const name = isStaff ? currentUser.NAME_STAFF : currentUser.NAME_RECIPIENT;
+            document.getElementById('welcomeMessage').innerText = `Welcome, ${name || 'User'}`;
+            document.getElementById('roleBadge').innerText = `👤 ${currentRole}`;
+            document.getElementById('roleSubtext').innerText = isStaff ?
+                'Staff Dashboard · Manage donations & inventory' :
+                'Recipient Dashboard · Browse available items';
+
+            return true;
+        }
+
+        function logout() {
+            localStorage.removeItem('session');
+            window.location.href = '/login.html';
+        }
+
+        // ============================================================
+        //  DATA FETCHING
+        // ============================================================
+        async function fetchStats() {
+            try {
+                const itemsRes = await fetch('/api/items');
+                allItems = await itemsRes.json();
+
+                let totalQty = 0;
+                let nearExpiry = 0;
+                const today = new Date();
+                const sevenDays = new Date();
+                sevenDays.setDate(today.getDate() + 7);
+
+                allItems.forEach(item => {
+                    const qty = parseInt(item.STOCK_QUANTITY) || 0;
+                    totalQty += qty;
+                    if (item.EXPIRY_DATE) {
+                        const exp = new Date(item.EXPIRY_DATE);
+                        if (exp >= today && exp <= sevenDays) {
+                            nearExpiry += qty;
+                        }
+                    }
+                });
+
+                document.getElementById('totalItems').textContent = totalQty;
+                document.getElementById('nearExpiry').textContent = nearExpiry;
+
+                const recRes = await fetch('/api/admin/recipients');
+                const recipients = await recRes.json();
+                document.getElementById('totalRecipients').textContent = recipients.length || 0;
+
+                const donRes = await fetch('/api/donations');
+                allDonations = await donRes.json();
+                const pending = allDonations.filter(d => d.STATUS === 'Pending');
+                document.getElementById('pendingDonations').textContent = pending.length || 0;
+
+            } catch (err) {
+                console.error('Stats error:', err);
             }
         }
-        return true;
-    });
 
-    // 5. Sorting
-    const sortQty = document.getElementById('sortQty').value;
-    const sortExpiry = document.getElementById('sortExpiry').value;
-
-    // Sort by quantity
-    if (sortQty === 'asc') {
-        data.sort((a, b) => (parseInt(a.STOCK_QUANTITY) || 0) - (parseInt(b.STOCK_QUANTITY) || 0));
-    } else if (sortQty === 'desc') {
-        data.sort((a, b) => (parseInt(b.STOCK_QUANTITY) || 0) - (parseInt(a.STOCK_QUANTITY) || 0));
-    }
-
-    // Sort by expiry date (secondary sort if quantity sort not active, or combined)
-    // We'll apply expiry sort either as primary if quantity sort is 'none', or as secondary.
-    if (sortExpiry !== '') {
-        // If quantity sort is active, we do a stable sort: first by expiry, then by quantity
-        // But to combine, we can sort by expiry first, then by quantity? Actually we want to allow both.
-        // We'll implement: if both selected, sort by expiry first then quantity.
-        // But to keep it simple, we'll allow separate: if expiry sort is selected, we sort by expiry primarily.
-        // However, we'll let the user choose one or the other, or both.
-        // Let's do: if expiry sort is selected, sort by expiry, and then apply quantity sort if selected.
-        // But we already applied quantity sort above, so we need to re-sort with expiry as primary?
-        // Better: apply expiry sort first, then quantity sort (so quantity sort overrides).
-        // We'll re-sort: first by expiry, then by quantity.
-        // But that might conflict. We'll implement: if both are selected, we sort by expiry first, then by quantity.
-        // So we'll combine both.
-        // Actually, let's sort by expiry first, then by quantity (if quantity sort is selected).
-        // We'll apply expiry sort, then quantity sort on top.
-        // But we already applied quantity sort. We'll redo.
-
-        // Let's redo sorting from scratch: apply expiry sort first, then quantity sort.
-        // We'll define a custom sort function.
-        data.sort((a, b) => {
-            // First compare expiry
-            const aExp = a.EXPIRY_DATE ? new Date(a.EXPIRY_DATE).getTime() : Infinity;
-            const bExp = b.EXPIRY_DATE ? new Date(b.EXPIRY_DATE).getTime() : Infinity;
-            let cmp = 0;
-            if (sortExpiry === 'asc') {
-                cmp = (aExp - bExp);
-            } else if (sortExpiry === 'desc') {
-                cmp = (bExp - aExp);
+        async function fetchDonors() {
+            try {
+                const res = await fetch('/api/donors');
+                allDonors = await res.json();
+            } catch (err) {
+                console.error('Donors error:', err);
             }
-            if (cmp !== 0) return cmp;
-            // If expiry equal or both null, then sort by quantity if selected
-            if (sortQty === 'asc') {
-                return (parseInt(a.STOCK_QUANTITY) || 0) - (parseInt(b.STOCK_QUANTITY) || 0);
-            } else if (sortQty === 'desc') {
-                return (parseInt(b.STOCK_QUANTITY) || 0) - (parseInt(a.STOCK_QUANTITY) || 0);
+        }
+
+        async function fetchStaff() {
+            try {
+                const res = await fetch('/api/staff/list');
+                allStaff = await res.json();
+            } catch (err) {
+                console.error('Staff error:', err);
             }
-            return 0;
+        }
+
+        // ============================================================
+        //  RECIPIENT INVENTORY TABLE
+        // ============================================================
+        function renderRecipientInventory() {
+            const tbody = document.getElementById('recipientInventoryTable');
+            if (!allItems.length) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;">No items available.</td></tr>';
+                return;
+            }
+            let html = '';
+            allItems.forEach(item => {
+                const exp = item.EXPIRY_DATE ? new Date(item.EXPIRY_DATE).toLocaleDateString() : 'N/A';
+                html += `<tr>
+                            <td>${item.ITEM_ID}</td>
+                            <td><strong>${item.NAME || '—'}</strong></td>
+                            <td>${item.TYPE || '—'}</td>
+                            <td>${item.STOCK_QUANTITY || 0}</td>
+                            <td>${exp}</td>
+                        </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        // ============================================================
+        //  CHARTS – STAFF DASHBOARD
+        // ============================================================
+
+        // -- NEW: Total Items Managed by Staff (Horizontal Bar) --
+        function buildStaffWorkloadChart() {
+            const ctx = document.getElementById('staffWorkloadChart').getContext('2d');
+
+            // Aggregate stock_quantity by staff_ID and manager_name
+            const staffMap = {};
+            allItems.forEach(item => {
+                const staffId = item.STAFF_ID || 0;
+                const name = item.MANAGER_NAME || 'Unassigned';
+                const qty = parseInt(item.STOCK_QUANTITY) || 0;
+                if (!staffMap[staffId]) {
+                    staffMap[staffId] = { name: name, total: 0 };
+                }
+                staffMap[staffId].total += qty;
+            });
+
+            // Convert to array, sort descending, limit to top 10 (or show all)
+            const sorted = Object.values(staffMap)
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 12); // show up to 12 staff
+
+            const labels = sorted.map(d => d.name.length > 20 ? d.name.slice(0, 18) + '…' : d.name);
+            const data = sorted.map(d => d.total);
+
+            if (chartWorkload) chartWorkload.destroy();
+            chartWorkload = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total items managed',
+                        data: data,
+                        backgroundColor: 'rgba(26, 63, 110, 0.75)',
+                        borderColor: 'rgba(26, 63, 110, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // horizontal bar
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ctx.parsed.x + ' units'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { font: { size: 11 } }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // -- Expiry Date Chart (Bar by month) --
+        function buildExpiryChart() {
+            const ctx = document.getElementById('expiryChart').getContext('2d');
+
+            const expiryMap = {};
+            const now = new Date();
+            const next12Months = [];
+            for (let i = 0; i < 12; i++) {
+                const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                const label = d.toLocaleString('default', { month: 'short', year: 'numeric' });
+                next12Months.push(label);
+                expiryMap[label] = 0;
+            }
+
+            allItems.forEach(item => {
+                if (item.EXPIRY_DATE) {
+                    const exp = new Date(item.EXPIRY_DATE);
+                    if (exp >= now) {
+                        const diffMonths = (exp.getFullYear() - now.getFullYear()) * 12 + (exp.getMonth() - now.getMonth());
+                        if (diffMonths >= 0 && diffMonths < 12) {
+                            const label = exp.toLocaleString('default', { month: 'short', year: 'numeric' });
+                            if (expiryMap[label] !== undefined) {
+                                expiryMap[label] += (parseInt(item.STOCK_QUANTITY) || 0);
+                            }
+                        }
+                    }
+                }
+            });
+
+            const labels = Object.keys(expiryMap);
+            const data = labels.map(l => expiryMap[l]);
+
+            if (chartExpiry) chartExpiry.destroy();
+            chartExpiry = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Items expiring',
+                        data: data,
+                        backgroundColor: data.map(v => v > 0 ? '#e67e22' : '#bdc3c7'),
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: ctx => ctx.parsed.y + ' units' } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { font: { size: 11 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        // -- Donation Status (Doughnut) --
+        function buildStatusChart() {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+
+            const statusCounts = { Pending: 0, Approve: 0, Active: 0, Completed: 0, Cancelled: 0 };
+            allDonations.forEach(d => {
+                const s = d.STATUS || 'Pending';
+                if (statusCounts[s] !== undefined) statusCounts[s]++;
+                else statusCounts[s] = 1;
+            });
+
+            const labels = Object.keys(statusCounts);
+            const data = labels.map(l => statusCounts[l]);
+            const colors = ['#f1c40f', '#3498db', '#2ecc71', '#2c3e50', '#e74c3c'];
+
+            if (chartStatus) chartStatus.destroy();
+            chartStatus = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14, font: { size: 12 } } },
+                        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.parsed + ' batches' } }
+                    },
+                    cutout: '60%',
+                }
+            });
+        }
+
+        // -- Donor Contribution (Horizontal Bar) --
+        function buildDonorChart() {
+            const ctx = document.getElementById('donorContributionChart').getContext('2d');
+
+            const donorMap = {};
+            allDonations.forEach(d => {
+                const id = d.DONOR_ID || 1;
+                const name = d.NAME_DONOR || 'Anonymous';
+                if (!donorMap[id]) donorMap[id] = { name: name, total: 0 };
+                donorMap[id].total += (parseInt(d.TOTAL_QUANTITY) || 0);
+            });
+
+            const sorted = Object.values(donorMap).sort((a, b) => b.total - a.total).slice(0, 10);
+            const labels = sorted.map(d => d.name.length > 18 ? d.name.slice(0, 16) + '…' : d.name);
+            const data = sorted.map(d => d.total);
+
+            if (chartDonor) chartDonor.destroy();
+            chartDonor = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Items donated',
+                        data: data,
+                        backgroundColor: 'rgba(26, 63, 110, 0.75)',
+                        borderColor: 'rgba(26, 63, 110, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: ctx => ctx.parsed.x + ' units' } }
+                    },
+                    scales: {
+                        x: { beginAtZero: true, ticks: { font: { size: 11 } } },
+                        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        //  LOAD ALL & INIT
+        // ============================================================
+        async function initDashboard() {
+            if (!checkAuth()) return;
+
+            await Promise.all([
+                fetchStats(),
+                fetchDonors(),
+                fetchStaff()
+            ]);
+
+            if (currentRole === 'Recipient') {
+                renderRecipientInventory();
+                return;
+            }
+
+            // Staff: re-fetch latest data
+            try {
+                const itemsRes = await fetch('/api/items');
+                allItems = await itemsRes.json();
+                const donRes = await fetch('/api/donations');
+                allDonations = await donRes.json();
+            } catch (e) {
+                console.error('Refetch error:', e);
+            }
+
+            // Build charts
+            buildStaffWorkloadChart();
+            buildExpiryChart();
+            buildStatusChart();
+            buildDonorChart();
+
+            setTimeout(() => {
+                if (chartWorkload) chartWorkload.resize();
+                if (chartExpiry) chartExpiry.resize();
+                if (chartStatus) chartStatus.resize();
+                if (chartDonor) chartDonor.resize();
+            }, 300);
+        }
+
+        // ============================================================
+        //  START
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', initDashboard);
+
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (chartWorkload) chartWorkload.resize();
+                if (chartExpiry) chartExpiry.resize();
+                if (chartStatus) chartStatus.resize();
+                if (chartDonor) chartDonor.resize();
+            }, 200);
         });
-    } else {
-        // Only quantity sort is active (already done above), but if we did quantity sort and no expiry, it's fine.
-        // However, our earlier quantity sort might be overridden by the expiry sort block, so we need to handle the case where only quantity sort is active.
-        // To simplify, we'll do all sorting in one place.
-        // Let's rewrite sorting:
-        // We'll apply sorting based on both dropdowns.
-        // We'll use a single sort function that considers both.
-        // Actually, the above block handles expiry first, then quantity. If expiry is not selected, it uses only quantity sort.
-        // So we can remove the earlier separate quantity sort and rely on this combined block.
-        // So we'll move the quantity sort into the combined block.
-        // Let's refactor:
-    }
-
-    // To avoid duplication, we'll redo the sort block:
-    data.sort((a, b) => {
-        // 1. Expiry sort
-        if (sortExpiry !== '') {
-            const aExp = a.EXPIRY_DATE ? new Date(a.EXPIRY_DATE).getTime() : Infinity;
-            const bExp = b.EXPIRY_DATE ? new Date(b.EXPIRY_DATE).getTime() : Infinity;
-            let cmp = 0;
-            if (sortExpiry === 'asc') {
-                cmp = aExp - bExp;
-            } else if (sortExpiry === 'desc') {
-                cmp = bExp - aExp;
-            }
-            if (cmp !== 0) return cmp;
-        }
-        // 2. Quantity sort (if expiry equal or not sorting by expiry)
-        if (sortQty === 'asc') {
-            return (parseInt(a.STOCK_QUANTITY) || 0) - (parseInt(b.STOCK_QUANTITY) || 0);
-        } else if (sortQty === 'desc') {
-            return (parseInt(b.STOCK_QUANTITY) || 0) - (parseInt(a.STOCK_QUANTITY) || 0);
-        }
-        return 0;
-    });
-
-    // 6. Render
-    renderTable(data);
-}
-
-function clearFilters() {
-    document.getElementById('searchName').value = '';
-    document.getElementById('searchType').value = '';
-    document.getElementById('searchExpiry').value = '';
-    document.getElementById('filterStaff').value = '';
-    document.getElementById('filterStaffId').value = '';
-    document.getElementById('sortQty').value = '';
-    document.getElementById('sortExpiry').value = '';
-    applyFilters();
-}
-
-function renderTable(dataToRender) {
-    const tbody = document.querySelector('table tbody');
-    tbody.innerHTML = '';
-    
-    if (dataToRender.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No items found matching your filters.</td></tr>';
-        return;
-    }
-
-    dataToRender.forEach(item => {
-        const expDate = item.EXPIRY_DATE ? new Date(item.EXPIRY_DATE).toLocaleDateString() : 'N/A';
-        const donationID = item.DONATION_ID || 'N/A';
-        const manager = item.MANAGER_NAME || 'Unassigned';
-
-        let row = `<tr>
-            <td>${item.ITEM_ID}</td>
-            <td>${item.NAME}</td>
-            <td>${item.TYPE}</td>
-            <td><strong>${item.STOCK_QUANTITY}</strong></td>
-            <td>${expDate}</td>`;
-        
-        const sessionData = localStorage.getItem('session');
-        const currentUser = sessionData ? JSON.parse(sessionData) : null;
-        
-        if (currentUser && currentUser.role === 'Staff') {
-            row += `<td class="staff-only" style="display:table-cell; color:#0056b3; font-weight:bold;">${donationID}</td>
-                    <td class="staff-only" style="display:table-cell;">${manager}</td>
-                    <td class="staff-only" style="display:table-cell;">
-                        <button class="btn btn-blue" onclick="editItem(${item.ITEM_ID})">Edit</button>
-                        <button class="btn btn-red" onclick="deleteItem(${item.ITEM_ID})">Delete</button>
-                    </td>`;
-        } else {
-            row += `<td class="staff-only" style="display:none;"></td>
-                    <td class="staff-only" style="display:none;"></td>
-                    <td class="staff-only" style="display:none;"></td>`;
-        }
-        
-        row += `</tr>`;
-        tbody.innerHTML += row;
-    });
-}
-
-function editItem(id) {
-    window.location.href = `/edit.html?id=${id}`;
-}
-
-async function deleteItem(id) {
-    if (confirm("Are you sure you want to delete this item?")) {
-        const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-            loadItems();
-            loadStatistics();
-        } else {
-            const err = await res.json();
-            alert(err.error);
-        }
-    }
-}
-
-// Initialize Page
-checkAuth();
-</script>
+    </script>
 
 </body>
 </html>

@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Food Inventory List · Donation System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js">
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f8;
+            padding: 24px;
+            color: #1a2332;
+        }
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        /* header */
+        .page-header {
+            background: #fff;
+            border-radius: 18px;
+            padding: 18px 28px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e9edf4;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .page-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #0b2a4f;
+        }
+        .page-header .back-btn {
+            background: #f0f4fe;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-weight: 500;
+            cursor: pointer;
+            color: #1a3f6e;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .page-header .back-btn:hover {
+            background: #e0e8fa;
+        }
+
+        /* ============================================
+               ENHANCED CHART CARD
+            ============================================ */
+        .chart-card {
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e9edf4;
+            margin-bottom: 28px;
+            overflow: hidden;
+            transition: box-shadow 0.25s;
+        }
+        .chart-card:hover {
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        /* header strip */
+        .chart-card .chart-head {
+            background: linear-gradient(135deg, #0b2a4f 0%, #1a3f6e 100%);
+            padding: 18px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .chart-card .chart-head h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            letter-spacing: -0.2px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chart-card .chart-head h3 span {
+            font-weight: 400;
+            opacity: 0.85;
+            font-size: 14px;
+        }
+        .chart-card .chart-head .chart-stats {
+            display: flex;
+            gap: 24px;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+        }
+        .chart-card .chart-head .chart-stats strong {
+            font-weight: 600;
+            font-size: 18px;
+            color: #fff;
+            display: block;
+            margin-top: 2px;
+        }
+        .chart-card .chart-head .chart-stats .stat-item {
+            text-align: center;
+        }
+
+        /* body: chart + legend */
+        .chart-card .chart-body {
+            padding: 24px 28px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 30px;
+            background: #fafcff;
+        }
+        .chart-card .chart-body .chart-wrapper {
+            flex: 2 1 320px;
+            height: 240px;
+            position: relative;
+            min-height: 200px;
+        }
+        .chart-card .chart-body .chart-legend-custom {
+            flex: 1 1 160px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .chart-card .chart-body .chart-legend-custom .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #2a3f5a;
+            padding: 4px 0;
+            border-bottom: 1px solid #f0f2f8;
+        }
+        .chart-card .chart-body .chart-legend-custom .legend-item .color-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .chart-card .chart-body .chart-legend-custom .legend-item .value {
+            margin-left: auto;
+            font-weight: 600;
+            color: #0b2a4f;
+        }
+
+        /* filter container (unchanged) */
+        .filter-container {
+            background: #fff;
+            border-radius: 18px;
+            padding: 20px 24px;
+            border: 1px solid #e9edf4;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+        }
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: flex-end;
+        }
+        .filter-group {
+            flex: 1 1 160px;
+            min-width: 130px;
+        }
+        .filter-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7a93;
+            margin-bottom: 4px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+        .filter-group input,
+        .filter-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #dce2ec;
+            border-radius: 10px;
+            font-size: 14px;
+            background: #fff;
+            transition: 0.2s;
+        }
+        .filter-group input:focus,
+        .filter-group select:focus {
+            border-color: #1a3f6e;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(26, 63, 110, 0.1);
+        }
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+        .filter-actions .btn-clear {
+            background: #6c7a93;
+            color: #fff;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .filter-actions .btn-clear:hover {
+            background: #5a6a82;
+        }
+        .filter-actions .btn-apply {
+            background: #1a3f6e;
+            color: #fff;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .filter-actions .btn-apply:hover {
+            background: #0b2a4f;
+        }
+
+        /* table (unchanged) */
+        .table-wrapper {
+            background: #fff;
+            border-radius: 18px;
+            padding: 0 0 4px 0;
+            border: 1px solid #e9edf4;
+            overflow-x: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th {
+            background: #f7f9fc;
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #2a3f5a;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-bottom: 1px solid #e9edf4;
+        }
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f2f8;
+        }
+        tr:hover td {
+            background: #fafbff;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #8a9bb0;
+        }
+        .badge-quantity {
+            font-weight: 600;
+            color: #1a3f6e;
+        }
+        .staff-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .staff-actions .btn-sm {
+            padding: 4px 12px;
+            border: none;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-sm.edit {
+            background: #e3e9f5;
+            color: #1a3f6e;
+        }
+        .btn-sm.edit:hover {
+            background: #ccd8ec;
+        }
+        .btn-sm.delete {
+            background: #fde8e8;
+            color: #b13e3e;
+        }
+        .btn-sm.delete:hover {
+            background: #fcd5d5;
+        }
+
+        /* responsive */
+        @media (max-width: 768px) {
+            .chart-card .chart-head {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .chart-card .chart-head .chart-stats {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .chart-card .chart-body {
+                flex-direction: column;
+            }
+            .chart-card .chart-body .chart-wrapper {
+                width: 100%;
+                height: 200px;
+            }
+            .chart-card .chart-body .chart-legend-custom {
+                flex-direction: row;
+                flex-wrap: wrap;
+                width: 100%;
+                gap: 6px 18px;
+            }
+            .chart-card .chart-body .chart-legend-custom .legend-item {
+                flex: 0 0 auto;
+                border-bottom: none;
+            }
+            .filter-row {
+                flex-direction: column;
+            }
+            .filter-group {
+                flex: 1 1 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+            <h2>📋 Food Inventory List</h2>
+            <a href="/" class="back-btn">← Back to Dashboard</a>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- ENHANCED CHART CARD                          -->
+        <!-- ============================================ -->
+        <div class="chart-card" id="typeChartCard">
+            <!-- Head with gradient and stats -->
+            <div class="chart-head">
+                <h3>
+                    📊 Item Type Distribution
+                    <span>— total quantity by category</span>
+                </h3>
+                <div class="chart-stats" id="chartStats">
+                    <div class="stat-item">
+                        <span style="font-weight:400; opacity:0.7;">Types</span>
+                        <strong id="typeCount">0</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span style="font-weight:400; opacity:0.7;">Total units</span>
+                        <strong id="totalUnits">0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body: chart + custom legend -->
+            <div class="chart-body">
+                <div class="chart-wrapper">
+                    <canvas id="typeDistributionChart"></canvas>
+                </div>
+                <div class="chart-legend-custom" id="customLegend">
+                    <!-- filled by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-container">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Search by Name</label>
+                    <input type="text" id="searchName" placeholder="e.g., Canned Beans" />
+                </div>
+                <div class="filter-group">
+                    <label>Filter by Type</label>
+                    <input type="text" id="searchType" placeholder="e.g., Food" />
+                </div>
+                <div class="filter-group">
+                    <label>Filter by Expiry Date</label>
+                    <input type="date" id="searchExpiry" />
+                </div>
+                <div class="filter-group">
+                    <label>Managing Staff</label>
+                    <select id="filterStaff">
+                        <option value="">All Staff</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Staff ID</label>
+                    <input type="text" id="filterStaffId" placeholder="e.g., 101" />
+                </div>
+            </div>
+            <div class="filter-row" style="margin-top:12px;">
+                <div class="filter-group" style="flex:1;">
+                    <label>Sort by Quantity</label>
+                    <select id="sortQty">
+                        <option value="">None</option>
+                        <option value="asc">Ascending</option>
+                        <option value="desc">Descending</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="flex:1;">
+                    <label>Sort by Expiry Date</label>
+                    <select id="sortExpiry">
+                        <option value="">None</option>
+                        <option value="asc">Earliest first</option>
+                        <option value="desc">Latest first</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="flex:0 0 auto; display:flex; align-items:flex-end; gap:8px;">
+                    <button class="btn-apply" onclick="applyFilters()">Apply</button>
+                    <button class="btn-clear" onclick="clearFilters()">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item ID</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Expiry Date</th>
+                        <th>Donation ID</th>
+                        <th>Managed By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTableBody">
+                    <tr>
+                        <td colspan="8" class="empty-state">Loading inventory…</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // ---------- global state ----------
+        let inventoryData = [];
+        let staffList = [];
+        let currentUser = null;
+        let typeChartInstance = null;
+
+        // ---------- auth check ----------
+        function checkAuth() {
+            const session = localStorage.getItem('session');
+            if (!session) {
+                window.location.href = '/login.html';
+                return false;
+            }
+            currentUser = JSON.parse(session);
+            return true;
+        }
+
+        // ---------- load staff for filter ----------
+        async function loadStaffFilter() {
+            try {
+                const res = await fetch('/api/staff/list');
+                staffList = await res.json();
+                const select = document.getElementById('filterStaff');
+                staffList.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.STAFF_ID;
+                    opt.textContent = `${s.NAME_STAFF} (${s.ROLE})`;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                console.error('Staff filter error:', err);
+            }
+        }
+
+        // ---------- load inventory ----------
+        async function loadInventory() {
+            try {
+                const res = await fetch('/api/items');
+                inventoryData = await res.json();
+                renderTypeChart(inventoryData);
+                applyFilters();
+            } catch (err) {
+                console.error('Inventory load error:', err);
+            }
+        }
+
+        // ---------- render donut chart + custom legend ----------
+        function renderTypeChart(items) {
+            const ctx = document.getElementById('typeDistributionChart').getContext('2d');
+            // Aggregate by type
+            const typeMap = {};
+            let totalAll = 0;
+            items.forEach(item => {
+                const type = item.TYPE || 'Unknown';
+                const qty = parseInt(item.STOCK_QUANTITY) || 0;
+                typeMap[type] = (typeMap[type] || 0) + qty;
+                totalAll += qty;
+            });
+
+            const labels = Object.keys(typeMap);
+            const data = labels.map(l => typeMap[l]);
+            const colors = [
+                '#3498db', '#2ecc71', '#e67e22', '#9b59b6', '#1abc9c',
+                '#e74c3c', '#f1c40f', '#34495e', '#16a085', '#c0392b'
+            ];
+
+            // Update stats
+            document.getElementById('typeCount').textContent = labels.length;
+            document.getElementById('totalUnits').textContent = totalAll;
+
+            // Destroy old chart
+            if (typeChartInstance) {
+                typeChartInstance.destroy();
+            }
+
+            // Create new chart
+            typeChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false, // we use custom legend
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((ctx.parsed / total) * 100).toFixed(1);
+                                    return `${ctx.label}: ${ctx.parsed} units (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '62%',
+                }
+            });
+
+            // Build custom legend
+            const legendContainer = document.getElementById('customLegend');
+            legendContainer.innerHTML = '';
+            labels.forEach((label, idx) => {
+                const color = colors[idx % colors.length];
+                const value = data[idx];
+                const total = data.reduce((a, b) => a + b, 0);
+                const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                const div = document.createElement('div');
+                div.className = 'legend-item';
+                div.innerHTML = `
+                    <span class="color-dot" style="background:${color};"></span>
+                    <span>${label}</span>
+                    <span class="value">${value} <span style="font-weight:400;color:#8a9bb0;font-size:12px;">(${pct}%)</span></span>
+                `;
+                legendContainer.appendChild(div);
+            });
+        }
+
+        // ---------- filter & sort logic ----------
+        function applyFilters() {
+            let data = [...inventoryData];
+
+            const nameQ = document.getElementById('searchName').value.toLowerCase().trim();
+            const typeQ = document.getElementById('searchType').value.toLowerCase().trim();
+            const expQ = document.getElementById('searchExpiry').value;
+            const staffId = document.getElementById('filterStaff').value;
+            const staffIdSearch = document.getElementById('filterStaffId').value.trim();
+
+            if (nameQ) data = data.filter(i => (i.NAME || '').toLowerCase().includes(nameQ));
+            if (typeQ) data = data.filter(i => (i.TYPE || '').toLowerCase().includes(typeQ));
+            if (expQ) {
+                data = data.filter(i => {
+                    const d = i.EXPIRY_DATE ? new Date(i.EXPIRY_DATE).toISOString().split('T')[0] : '';
+                    return d === expQ;
+                });
+            }
+            if (staffId) {
+                const num = parseInt(staffId, 10);
+                data = data.filter(i => i.STAFF_ID === num);
+            }
+            if (staffIdSearch) {
+                const num = parseInt(staffIdSearch, 10);
+                if (!isNaN(num)) {
+                    data = data.filter(i => i.STAFF_ID === num);
+                } else {
+                    data = data.filter(i => (i.MANAGER_NAME || '').toLowerCase().includes(staffIdSearch.toLowerCase()));
+                }
+            }
+
+            const sortQty = document.getElementById('sortQty').value;
+            const sortExp = document.getElementById('sortExpiry').value;
+
+            data.sort((a, b) => {
+                if (sortExp) {
+                    const aExp = a.EXPIRY_DATE ? new Date(a.EXPIRY_DATE).getTime() : Infinity;
+                    const bExp = b.EXPIRY_DATE ? new Date(b.EXPIRY_DATE).getTime() : Infinity;
+                    if (sortExp === 'asc') return aExp - bExp;
+                    else return bExp - aExp;
+                }
+                return 0;
+            });
+            if (sortQty) {
+                data.sort((a, b) => {
+                    const aQ = parseInt(a.STOCK_QUANTITY) || 0;
+                    const bQ = parseInt(b.STOCK_QUANTITY) || 0;
+                    if (sortQty === 'asc') return aQ - bQ;
+                    else return bQ - aQ;
+                });
+            }
+
+            renderTable(data);
+        }
+
+        function clearFilters() {
+            document.getElementById('searchName').value = '';
+            document.getElementById('searchType').value = '';
+            document.getElementById('searchExpiry').value = '';
+            document.getElementById('filterStaff').value = '';
+            document.getElementById('filterStaffId').value = '';
+            document.getElementById('sortQty').value = '';
+            document.getElementById('sortExpiry').value = '';
+            applyFilters();
+        }
+
+        // ---------- render table ----------
+        function renderTable(data) {
+            const tbody = document.getElementById('inventoryTableBody');
+            if (!data.length) {
+                tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No items match your filters.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            const isStaff = currentUser && currentUser.role === 'Staff';
+            data.forEach(item => {
+                const exp = item.EXPIRY_DATE ? new Date(item.EXPIRY_DATE).toLocaleDateString() : 'N/A';
+                const donationId = item.DONATION_ID || '—';
+                const manager = item.MANAGER_NAME || 'Unassigned';
+
+                html += `<tr>
+                    <td>${item.ITEM_ID}</td>
+                    <td><strong>${item.NAME || '—'}</strong></td>
+                    <td>${item.TYPE || '—'}</td>
+                    <td class="badge-quantity">${item.STOCK_QUANTITY || 0}</td>
+                    <td>${exp}</td>
+                    <td>${donationId}</td>
+                    <td>${manager}</td>
+                    <td>
+                        ${isStaff ? `
+                            <div class="staff-actions">
+                                <button class="btn-sm edit" onclick="editItem(${item.ITEM_ID})">Edit</button>
+                                <button class="btn-sm delete" onclick="deleteItem(${item.ITEM_ID})">Delete</button>
+                            </div>
+                        ` : '—'}
+                    </td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        // ---------- actions ----------
+        function editItem(id) {
+            window.location.href = `/edit.html?id=${id}`;
+        }
+
+        async function deleteItem(id) {
+            if (!confirm('Delete this item permanently?')) return;
+            try {
+                const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    alert('Item deleted.');
+                    loadInventory();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Delete failed.');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Network error.');
+            }
+        }
+
+        // ---------- init ----------
+        async function init() {
+            if (!checkAuth()) return;
+            await loadStaffFilter();
+            await loadInventory();
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+
+</body>
+</html>
